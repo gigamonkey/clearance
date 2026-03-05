@@ -70,6 +70,9 @@ private final class PopoutWindowDelegate: NSObject, NSWindowDelegate {
 private struct PopoutDocumentView: View {
     @ObservedObject var session: DocumentSession
     @State private var mode: WorkspaceMode
+    @State private var isOutlineVisible = true
+    @State private var headingScrollSequence = 0
+    @State private var headingScrollRequest: HeadingScrollRequest?
 
     init(session: DocumentSession, initialMode: WorkspaceMode) {
         self.session = session
@@ -77,18 +80,54 @@ private struct PopoutDocumentView: View {
     }
 
     var body: some View {
-        DocumentSurfaceView(session: session, mode: $mode)
-            .toolbar {
-                ToolbarItem(placement: .automatic) {
-                    Picker("Mode", selection: $mode) {
-                        ForEach(WorkspaceMode.allCases) { option in
-                            Text(option.title).tag(option)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                    .frame(width: 160)
+        let parsed = FrontmatterParser().parse(markdown: session.content)
+        HSplitView {
+            DocumentSurfaceView(
+                session: session,
+                parsedDocument: parsed,
+                headingScrollRequest: headingScrollRequest,
+                mode: $mode
+            )
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            if isOutlineVisible && mode == .view && !parsed.headings.isEmpty {
+                MarkdownOutlineView(headings: parsed.headings) { heading in
+                    headingScrollSequence += 1
+                    headingScrollRequest = HeadingScrollRequest(
+                        headingIndex: heading.index,
+                        sequence: headingScrollSequence
+                    )
+                }
+                .transition(.move(edge: .trailing).combined(with: .opacity))
+            }
+        }
+        .animation(.snappy(duration: 0.2), value: isOutlineVisible && mode == .view && !parsed.headings.isEmpty)
+        .toolbarRole(.editor)
+        .toolbar {
+            ToolbarItem(placement: .automatic) {
+                Button {
+                    isOutlineVisible.toggle()
+                } label: {
+                    Label(
+                        isOutlineVisible ? "Hide Outline" : "Show Outline",
+                        systemImage: "sidebar.right"
+                    )
                 }
             }
-            .frame(minWidth: 640, minHeight: 400)
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    mode = mode == .view ? .edit : .view
+                } label: {
+                    Label(
+                        mode == .edit ? "Done" : "Edit",
+                        systemImage: mode == .edit ? "checkmark" : "square.and.pencil"
+                    )
+                }
+            }
+        }
+        .frame(minWidth: 640, minHeight: 400)
+        .onChange(of: session.id) { _, _ in
+            headingScrollRequest = nil
+        }
     }
 }

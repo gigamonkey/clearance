@@ -24,28 +24,12 @@ struct RecentFilesSidebar: View {
             Divider()
 
             List(selection: $selectedPath) {
-                ForEach(entries) { entry in
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(entry.displayName)
-                            .font(.body)
-                            .lineLimit(1)
-                        Text(entry.directoryPath)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                            .truncationMode(.middle)
+                ForEach(groupedEntries) { section in
+                    Section(section.title) {
+                        ForEach(section.entries) { entry in
+                            row(for: entry)
+                        }
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .contentShape(Rectangle())
-                    .tag(entry.path)
-                    .onTapGesture {
-                        selectedPath = entry.path
-                        onSelect(entry)
-                    }
-                    .contextMenu {
-                        contextMenuActions(for: entry)
-                    }
-                    .draggable(entry.path)
                 }
             }
             .contextMenu(forSelectionType: String.self) { selectedPaths in
@@ -63,7 +47,46 @@ struct RecentFilesSidebar: View {
                 onSelect(entry)
             }
             .listStyle(.sidebar)
+            .animation(.snappy(duration: 0.26), value: entries.map { "\($0.path)|\($0.lastOpenedAt.timeIntervalSinceReferenceDate)" })
         }
+    }
+
+    private var groupedEntries: [RecentFilesSection] {
+        var buckets: [RecentFileBucket: [RecentFileEntry]] = [:]
+        for entry in entries {
+            buckets[RecentFileBucket.bucket(for: entry.lastOpenedAt), default: []].append(entry)
+        }
+
+        return RecentFileBucket.allCases.compactMap { bucket in
+            guard let sectionEntries = buckets[bucket], !sectionEntries.isEmpty else {
+                return nil
+            }
+
+            return RecentFilesSection(
+                bucket: bucket,
+                entries: sectionEntries
+            )
+        }
+    }
+
+    private func row(for entry: RecentFileEntry) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(entry.displayName)
+                .font(.body)
+                .lineLimit(1)
+            Text(entry.directoryPath)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .truncationMode(.middle)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .contentShape(Rectangle())
+        .tag(entry.path)
+        .contextMenu {
+            contextMenuActions(for: entry)
+        }
+        .draggable(entry.path)
     }
 
     @ViewBuilder
@@ -86,5 +109,60 @@ struct RecentFilesSidebar: View {
             pasteboard.clearContents()
             pasteboard.setString(entry.path, forType: .string)
         }
+    }
+}
+
+private struct RecentFilesSection: Identifiable {
+    let bucket: RecentFileBucket
+    let entries: [RecentFileEntry]
+
+    var id: String { bucket.rawValue }
+    var title: String { bucket.rawValue }
+}
+
+private enum RecentFileBucket: String, CaseIterable {
+    case today = "Today"
+    case yesterday = "Yesterday"
+    case thisWeek = "This Week"
+    case lastWeek = "Last Week"
+    case thisMonth = "This Month"
+    case lastMonth = "Last Month"
+    case older = "Older"
+
+    static func bucket(for date: Date, now: Date = .now, calendar: Calendar = .current) -> RecentFileBucket {
+        let startOfToday = calendar.startOfDay(for: now)
+        let startOfYesterday = calendar.date(byAdding: .day, value: -1, to: startOfToday) ?? startOfToday
+
+        let startOfThisWeek = calendar.dateInterval(of: .weekOfYear, for: now)?.start ?? startOfToday
+        let startOfLastWeek = calendar.date(byAdding: .weekOfYear, value: -1, to: startOfThisWeek) ?? startOfThisWeek
+
+        let startOfThisMonth = calendar.dateInterval(of: .month, for: now)?.start ?? startOfToday
+        let startOfLastMonth = calendar.date(byAdding: .month, value: -1, to: startOfThisMonth) ?? startOfThisMonth
+
+        if date >= startOfToday {
+            return .today
+        }
+
+        if date >= startOfYesterday && date < startOfToday {
+            return .yesterday
+        }
+
+        if date >= startOfThisWeek {
+            return .thisWeek
+        }
+
+        if date >= startOfLastWeek {
+            return .lastWeek
+        }
+
+        if date >= startOfThisMonth {
+            return .thisMonth
+        }
+
+        if date >= startOfLastMonth {
+            return .lastMonth
+        }
+
+        return .older
     }
 }

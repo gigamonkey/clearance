@@ -23,7 +23,7 @@ final class RecentFilesStore: ObservableObject {
     func add(url: URL) {
         let standardizedPath = url.standardizedFileURL.path
         entries.removeAll { $0.path == standardizedPath }
-        entries.insert(RecentFileEntry(path: standardizedPath), at: 0)
+        entries.insert(RecentFileEntry(path: standardizedPath, lastOpenedAt: .now), at: 0)
 
         if entries.count > maxEntries {
             entries = Array(entries.prefix(maxEntries))

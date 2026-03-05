@@ -40,5 +40,21 @@ final class RecentFilesStoreTests: XCTestCase {
         XCTAssertEqual(secondStore.entries.first?.path, "/tmp/alpha.md")
         XCTAssertEqual(secondStore.entries.first?.displayName, "alpha.md")
         XCTAssertEqual(secondStore.entries.first?.directoryPath, "/tmp")
+        XCTAssertNotEqual(secondStore.entries.first?.lastOpenedAt, .distantPast)
+    }
+
+    func testDecodesLegacyEntriesWithoutLastOpenedDate() throws {
+        let suite = "RecentFilesStoreTests-4"
+        let defaults = UserDefaults(suiteName: suite)!
+        defaults.removePersistentDomain(forName: suite)
+
+        let legacyData = #" [{"path":"/tmp/legacy.md"}] "#.data(using: .utf8)!
+        defaults.set(legacyData, forKey: "recent")
+
+        let store = RecentFilesStore(userDefaults: defaults, storageKey: "recent")
+
+        XCTAssertEqual(store.entries.count, 1)
+        XCTAssertEqual(store.entries.first?.path, "/tmp/legacy.md")
+        XCTAssertEqual(store.entries.first?.lastOpenedAt, .distantPast)
     }
 }

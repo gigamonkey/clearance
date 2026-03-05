@@ -46,4 +46,13 @@ final class RenderedHTMLBuilderTests: XCTestCase {
         XCTAssertFalse(html.contains("https://"))
         XCTAssertFalse(html.contains("script-src"))
     }
+
+    func testCodeBlocksUseWrappedLayout() {
+        let document = ParsedMarkdownDocument(body: "```txt\nLong long long line\n```", flattenedFrontmatter: [:])
+
+        let html = RenderedHTMLBuilder().build(document: document)
+
+        XCTAssertTrue(html.contains("white-space: pre-wrap"))
+        XCTAssertTrue(html.contains("overflow-wrap: anywhere"))
+    }
 }

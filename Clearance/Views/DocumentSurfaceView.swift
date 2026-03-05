@@ -2,13 +2,17 @@ import SwiftUI
 
 struct DocumentSurfaceView: View {
     @ObservedObject var session: DocumentSession
+    let parsedDocument: ParsedMarkdownDocument
+    let headingScrollRequest: HeadingScrollRequest?
     @Binding var mode: WorkspaceMode
 
     var body: some View {
         switch mode {
         case .view:
-            let parsed = FrontmatterParser().parse(markdown: session.content)
-            RenderedMarkdownView(document: parsed)
+            RenderedMarkdownView(
+                document: parsedDocument,
+                headingScrollRequest: headingScrollRequest
+            )
         case .edit:
             CodeMirrorEditorView(
                 text: Binding(

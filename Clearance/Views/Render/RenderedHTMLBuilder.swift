@@ -275,8 +275,8 @@ struct RenderedHTMLBuilder {
         .markdown blockquote { border-left: 3px solid var(--quote); margin-left: 0; padding-left: 14px; color: var(--muted); }
         .markdown hr { border: none; border-top: 1px solid var(--rule); }
         .markdown code { font-family: 'SF Mono', Menlo, Monaco, monospace; background: var(--inline-bg); color: var(--inline-text); padding: 2px 6px; border-radius: 6px; font-size: 0.92em; }
-        .markdown pre { background: var(--code-bg); color: var(--code-text); padding: 14px; border-radius: 8px; overflow-x: auto; }
-        .markdown pre code { background: transparent; color: inherit; padding: 0; font-size: 0.92em; }
+        .markdown pre { background: var(--code-bg); color: var(--code-text); padding: 14px; border-radius: 8px; overflow-x: clip; white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; }
+        .markdown pre code { background: transparent; color: inherit; padding: 0; font-size: 0.92em; white-space: inherit; overflow-wrap: inherit; word-break: inherit; display: block; }
         .markdown pre code .hl-comment { color: var(--token-comment); }
         .markdown pre code .hl-keyword { color: var(--token-keyword); }
         .markdown pre code .hl-string { color: var(--token-string); }

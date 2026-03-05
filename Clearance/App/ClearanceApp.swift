@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 @main
@@ -25,10 +26,15 @@ struct ClearanceApp: App {
 
 struct WorkspaceCommandActions {
     let openFile: () -> Void
+    let toggleOutline: () -> Void
     let showViewMode: () -> Void
     let showEditMode: () -> Void
     let openInNewWindow: () -> Void
+    let findInDocument: () -> Bool
+    let printDocument: () -> Bool
     let hasActiveSession: Bool
+    let hasVisibleOutline: Bool
+    let canShowOutline: Bool
 }
 
 private struct WorkspaceCommandActionsKey: FocusedValueKey {
@@ -52,9 +58,43 @@ private struct ClearanceCommands: Commands {
             }
             .keyboardShortcut("o")
             .disabled(actions == nil)
+
+            Button("Open In New Window") {
+                actions?.openInNewWindow()
+            }
+            .keyboardShortcut("o", modifiers: [.command, .shift])
+            .disabled(actions?.hasActiveSession != true)
         }
 
-        CommandMenu("Document") {
+        CommandGroup(replacing: .printItem) {
+            Button("Print…") {
+                if let printDocument = actions?.printDocument {
+                    _ = printDocument()
+                } else {
+                    _ = performPrint()
+                }
+            }
+            .keyboardShortcut("p")
+            .disabled(actions?.hasActiveSession != true)
+        }
+
+        CommandGroup(after: .textEditing) {
+            Divider()
+
+            Button("Find…") {
+                if let findInDocument = actions?.findInDocument {
+                    if !findInDocument() {
+                        _ = performFind()
+                    }
+                } else {
+                    _ = performFind()
+                }
+            }
+            .keyboardShortcut("f")
+            .disabled(actions?.hasActiveSession != true)
+        }
+
+        CommandGroup(after: .sidebar) {
             Button("View Mode") {
                 actions?.showViewMode()
             }
@@ -69,11 +109,27 @@ private struct ClearanceCommands: Commands {
 
             Divider()
 
-            Button("Open In New Window") {
-                actions?.openInNewWindow()
+            Button(actions?.hasVisibleOutline == true ? "Hide Outline" : "Show Outline") {
+                actions?.toggleOutline()
             }
-            .keyboardShortcut("p", modifiers: [.command, .shift])
-            .disabled(actions?.hasActiveSession != true)
+            .keyboardShortcut("0")
+            .disabled(actions?.canShowOutline != true)
         }
+    }
+
+    private func performFind() -> Bool {
+        let findMenuItem = NSMenuItem()
+        findMenuItem.tag = NSTextFinder.Action.showFindInterface.rawValue
+        if NSApp.sendAction(#selector(NSResponder.performTextFinderAction(_:)), to: nil, from: findMenuItem) {
+            return true
+        }
+
+        let legacyFindMenuItem = NSMenuItem()
+        legacyFindMenuItem.tag = Int(NSFindPanelAction.showFindPanel.rawValue)
+        return NSApp.sendAction(#selector(NSTextView.performFindPanelAction(_:)), to: nil, from: legacyFindMenuItem)
+    }
+
+    private func performPrint() -> Bool {
+        NSApp.sendAction(#selector(NSView.printView(_:)), to: nil, from: nil)
     }
 }

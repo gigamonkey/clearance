@@ -30,6 +30,7 @@ final class FrontmatterParserTests: XCTestCase {
 
         XCTAssertEqual(parsed.body, markdown)
         XCTAssertTrue(parsed.flattenedFrontmatter.isEmpty)
+        XCTAssertEqual(parsed.headings.map(\.title), ["Hello"])
     }
 
     func testFlattensNestedObjectsAndArrays() {
@@ -53,5 +54,36 @@ final class FrontmatterParserTests: XCTestCase {
         XCTAssertEqual(parsed.flattenedFrontmatter["seo.keywords[0]"], "alpha")
         XCTAssertEqual(parsed.flattenedFrontmatter["seo.keywords[1]"], "beta")
         XCTAssertEqual(parsed.flattenedFrontmatter["nested.object.value"], "12")
+    }
+
+    func testParsesHeadingsFromBodyAfterFrontmatter() {
+        let markdown = """
+        ---
+        title: Sample
+        ---
+        # Top
+        ## Child
+        """
+
+        let parsed = FrontmatterParser().parse(markdown: markdown)
+
+        XCTAssertEqual(parsed.headings.map(\.title), ["Top", "Child"])
+        XCTAssertEqual(parsed.headings.map(\.level), [1, 2])
+    }
+
+    func testIgnoresHeadingsInsideFencedCodeBlocks() {
+        let markdown = """
+        # Keep
+
+        ```md
+        # Ignore
+        ```
+
+        ## Also Keep
+        """
+
+        let parsed = FrontmatterParser().parse(markdown: markdown)
+
+        XCTAssertEqual(parsed.headings.map(\.title), ["Keep", "Also Keep"])
     }
 }
