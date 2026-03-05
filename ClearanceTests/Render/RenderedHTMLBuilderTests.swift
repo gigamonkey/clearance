@@ -25,4 +25,14 @@ final class RenderedHTMLBuilderTests: XCTestCase {
 
         XCTAssertTrue(html.contains("<h1>Heading</h1>"))
     }
+
+    func testIncludesLocalOnlyContentSecurityPolicy() {
+        let document = ParsedMarkdownDocument(body: "Hello", flattenedFrontmatter: [:])
+
+        let html = RenderedHTMLBuilder().build(document: document)
+
+        XCTAssertTrue(html.contains("Content-Security-Policy"))
+        XCTAssertTrue(html.contains("default-src 'none'"))
+        XCTAssertTrue(html.contains("img-src data: file:"))
+    }
 }
