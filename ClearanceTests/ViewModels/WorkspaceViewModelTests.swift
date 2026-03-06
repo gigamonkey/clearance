@@ -137,6 +137,96 @@ final class WorkspaceViewModelTests: XCTestCase {
         XCTAssertTrue(viewModel.canNavigateBack)
     }
 
+    func testOpenRemoteUsesRenderURLForActiveDocumentBase() async throws {
+        let requestedURL = URL(string: "https://example.com/docs")!
+        let renderURL = URL(string: "https://example.com/docs/INDEX.md")!
+        let defaults = UserDefaults(suiteName: UUID().uuidString)!
+        let store = RecentFilesStore(userDefaults: defaults, storageKey: "recent")
+        let viewModel = WorkspaceViewModel(
+            recentFilesStore: store,
+            remoteDocumentLoader: { _ in
+                try await Task.sleep(nanoseconds: 30_000_000)
+                return RemoteDocument(requestedURL: requestedURL, renderURL: renderURL)
+            }
+        )
+
+        viewModel.open(url: requestedURL)
+
+        XCTAssertEqual(viewModel.activeDocumentURL, requestedURL)
+        XCTAssertEqual(viewModel.activeRenderURL, renderURL)
+        XCTAssertTrue(viewModel.isLoadingRemoteDocument)
+
+        try await Task.sleep(nanoseconds: 80_000_000)
+        XCTAssertEqual(viewModel.activeDocumentURL, requestedURL)
+        XCTAssertEqual(viewModel.activeRenderURL, renderURL)
+        XCTAssertFalse(viewModel.isLoadingRemoteDocument)
+    }
+
+    func testLatestRemoteRequestWins() async throws {
+        let firstRequestedURL = URL(string: "https://example.com/first")!
+        let firstRenderURL = URL(string: "https://example.com/first/INDEX.md")!
+        let secondRequestedURL = URL(string: "https://example.com/second")!
+        let secondRenderURL = URL(string: "https://example.com/second/INDEX.md")!
+        let defaults = UserDefaults(suiteName: UUID().uuidString)!
+        let store = RecentFilesStore(userDefaults: defaults, storageKey: "recent")
+        let viewModel = WorkspaceViewModel(
+            recentFilesStore: store,
+            remoteDocumentLoader: { url in
+                if url == firstRequestedURL {
+                    try? await Task.sleep(nanoseconds: 200_000_000)
+                    return RemoteDocument(requestedURL: firstRequestedURL, renderURL: firstRenderURL)
+                }
+
+                try? await Task.sleep(nanoseconds: 20_000_000)
+                return RemoteDocument(requestedURL: secondRequestedURL, renderURL: secondRenderURL)
+            }
+        )
+
+        viewModel.open(url: firstRequestedURL)
+        viewModel.open(url: secondRequestedURL)
+
+        try await Task.sleep(nanoseconds: 260_000_000)
+        XCTAssertEqual(viewModel.activeRemoteDocument?.requestedURL, secondRequestedURL)
+        XCTAssertEqual(viewModel.activeDocumentURL, secondRequestedURL)
+        XCTAssertEqual(viewModel.activeRenderURL, secondRenderURL)
+        XCTAssertFalse(viewModel.isLoadingRemoteDocument)
+    }
+
+    func testNavigationBackAcrossLocalAndRemote() async throws {
+        let localURL = try makeTempMarkdown(contents: "# Local")
+        let remoteRequestedURL = URL(string: "https://example.com/docs")!
+        let remoteRenderURL = URL(string: "https://example.com/docs/INDEX.md")!
+        let defaults = UserDefaults(suiteName: UUID().uuidString)!
+        let store = RecentFilesStore(userDefaults: defaults, storageKey: "recent")
+        let viewModel = WorkspaceViewModel(
+            recentFilesStore: store,
+            remoteDocumentLoader: { _ in
+                RemoteDocument(requestedURL: remoteRequestedURL, renderURL: remoteRenderURL)
+            }
+        )
+
+        viewModel.open(url: localURL)
+        viewModel.open(url: remoteRequestedURL)
+        await Task.yield()
+
+        XCTAssertTrue(viewModel.canNavigateBack)
+        XCTAssertEqual(viewModel.activeDocumentURL, remoteRequestedURL)
+        XCTAssertEqual(viewModel.activeRenderURL, remoteRenderURL)
+        XCTAssertNil(viewModel.activeSession)
+
+        XCTAssertTrue(viewModel.navigateBack())
+        XCTAssertEqual(viewModel.activeSession?.url.path, localURL.path)
+        XCTAssertEqual(viewModel.activeDocumentURL, localURL)
+        XCTAssertEqual(viewModel.activeRenderURL, localURL)
+        XCTAssertTrue(viewModel.canNavigateForward)
+
+        XCTAssertTrue(viewModel.navigateForward())
+        await Task.yield()
+        XCTAssertEqual(viewModel.activeDocumentURL, remoteRequestedURL)
+        XCTAssertEqual(viewModel.activeRenderURL, remoteRenderURL)
+        XCTAssertNil(viewModel.activeSession)
+    }
+
     private func makeTempMarkdown(contents: String) throws -> URL {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)

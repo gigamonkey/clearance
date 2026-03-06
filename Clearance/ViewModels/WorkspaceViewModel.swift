@@ -8,6 +8,8 @@ final class WorkspaceViewModel: NSObject, ObservableObject {
             bindActiveSession()
         }
     }
+    @Published private(set) var activeRemoteDocument: RemoteDocument?
+    @Published private(set) var isLoadingRemoteDocument = false
     @Published var errorMessage: String?
     @Published var mode: WorkspaceMode
     @Published var selectedRecentPath: String?
@@ -18,25 +20,44 @@ final class WorkspaceViewModel: NSObject, ObservableObject {
 
     let recentFilesStore: RecentFilesStore
 
+    var activeDocumentURL: URL? {
+        activeRemoteDocument?.requestedURL ?? activeSession?.url
+    }
+
+    var activeRenderURL: URL? {
+        activeRemoteDocument?.renderURL ?? activeSession?.url
+    }
+
     private let openPanelService: OpenPanelServicing
     private let appSettings: AppSettings
+    private let remoteDocumentLoader: @Sendable (URL) async throws -> RemoteDocument
     private var activeSessionCancellables: Set<AnyCancellable> = []
     private var externalChangeTimer: Timer?
     private weak var monitoredSession: DocumentSession?
+    private var remoteLoadTask: Task<Void, Never>?
+    private var remoteLoadGeneration = 0
     private var navigationHistory: [URL] = []
     private var navigationHistoryIndex = -1
 
     init(
         recentFilesStore: RecentFilesStore = RecentFilesStore(),
         openPanelService: OpenPanelServicing = OpenPanelService(),
-        appSettings: AppSettings = AppSettings()
+        appSettings: AppSettings = AppSettings(),
+        remoteDocumentLoader: @escaping @Sendable (URL) async throws -> RemoteDocument = { requestedURL in
+            try await RemoteDocumentFetcher.fetch(requestedURL)
+        }
     ) {
         self.recentFilesStore = recentFilesStore
         self.openPanelService = openPanelService
         self.appSettings = appSettings
+        self.remoteDocumentLoader = remoteDocumentLoader
         mode = appSettings.defaultOpenMode
         windowTitle = "Clearance"
         super.init()
+    }
+
+    deinit {
+        remoteLoadTask?.cancel()
     }
 
     @discardableResult
@@ -55,26 +76,110 @@ final class WorkspaceViewModel: NSObject, ObservableObject {
 
     @discardableResult
     func open(url: URL, recordNavigation: Bool = true, resetModeToDefault: Bool = true) -> DocumentSession? {
-        let standardizedURL = url.standardizedFileURL
+        _ = openInternal(url: url, recordNavigation: recordNavigation, resetModeToDefault: resetModeToDefault)
+        return activeSession
+    }
+
+    private func openInternal(url: URL, recordNavigation: Bool, resetModeToDefault: Bool) -> Bool {
+        let normalizedURL = normalizedURL(for: url)
+
+        if normalizedURL.isFileURL {
+            return openLocal(
+                url: normalizedURL,
+                recordNavigation: recordNavigation,
+                resetModeToDefault: resetModeToDefault
+            ) != nil
+        }
+
+        openRemote(
+            url: normalizedURL,
+            recordNavigation: recordNavigation,
+            resetModeToDefault: resetModeToDefault
+        )
+        return true
+    }
+
+    private func openLocal(url: URL, recordNavigation: Bool, resetModeToDefault: Bool) -> DocumentSession? {
+        remoteLoadTask?.cancel()
+        remoteLoadTask = nil
+        remoteLoadGeneration += 1
+        isLoadingRemoteDocument = false
+        activeRemoteDocument = nil
 
         do {
-            let session = try DocumentSession(url: standardizedURL)
+            let session = try DocumentSession(url: url)
             activeSession = session
-            recentFilesStore.add(url: standardizedURL)
-            selectedRecentPath = standardizedURL.path
+            recentFilesStore.add(url: url)
+            selectedRecentPath = RecentFileEntry.storageKey(for: url)
             if resetModeToDefault {
                 mode = appSettings.defaultOpenMode
             }
             if recordNavigation {
-                pushNavigationEntry(standardizedURL)
+                pushNavigationEntry(url)
             } else {
                 updateNavigationAvailability()
             }
             errorMessage = nil
             return session
         } catch {
-            errorMessage = "Failed to open \(standardizedURL.path): \(error.localizedDescription)"
+            errorMessage = "Failed to open \(url.path): \(error.localizedDescription)"
             return nil
+        }
+    }
+
+    private func openRemote(url: URL, recordNavigation: Bool, resetModeToDefault: Bool) {
+        remoteLoadTask?.cancel()
+        remoteLoadTask = nil
+        remoteLoadGeneration += 1
+        let generation = remoteLoadGeneration
+
+        activeSession = nil
+        isLoadingRemoteDocument = true
+        activeRemoteDocument = RemoteDocumentFetcher.resolveForMarkdownRequest(url)
+        recentFilesStore.add(url: url)
+        selectedRecentPath = RecentFileEntry.storageKey(for: url)
+        if resetModeToDefault {
+            mode = appSettings.defaultOpenMode
+        }
+        if recordNavigation {
+            pushNavigationEntry(url)
+        } else {
+            updateNavigationAvailability()
+        }
+        errorMessage = nil
+
+        remoteLoadTask = Task { [weak self] in
+            guard let self else {
+                return
+            }
+
+            do {
+                let remoteDocument = try await self.remoteDocumentLoader(url)
+                guard self.remoteLoadGeneration == generation,
+                      !Task.isCancelled else {
+                    return
+                }
+
+                self.activeRemoteDocument = remoteDocument
+                self.isLoadingRemoteDocument = false
+                self.errorMessage = nil
+                self.remoteLoadTask = nil
+            } catch is CancellationError {
+                guard self.remoteLoadGeneration == generation else {
+                    return
+                }
+
+                self.isLoadingRemoteDocument = false
+                self.remoteLoadTask = nil
+            } catch {
+                guard self.remoteLoadGeneration == generation else {
+                    return
+                }
+
+                self.isLoadingRemoteDocument = false
+                self.errorMessage = "Failed to open \(url.absoluteString): \(error.localizedDescription)"
+                self.remoteLoadTask = nil
+            }
         }
     }
 
@@ -85,7 +190,7 @@ final class WorkspaceViewModel: NSObject, ObservableObject {
 
         let targetIndex = navigationHistoryIndex - 1
         let targetURL = navigationHistory[targetIndex]
-        guard open(url: targetURL, recordNavigation: false, resetModeToDefault: false) != nil else {
+        guard openInternal(url: targetURL, recordNavigation: false, resetModeToDefault: false) else {
             return false
         }
 
@@ -101,7 +206,7 @@ final class WorkspaceViewModel: NSObject, ObservableObject {
         }
 
         let targetURL = navigationHistory[nextIndex]
-        guard open(url: targetURL, recordNavigation: false, resetModeToDefault: false) != nil else {
+        guard openInternal(url: targetURL, recordNavigation: false, resetModeToDefault: false) else {
             return false
         }
 
@@ -196,7 +301,7 @@ final class WorkspaceViewModel: NSObject, ObservableObject {
 
     private func pushNavigationEntry(_ url: URL) {
         if navigationHistoryIndex >= 0,
-           navigationHistory[navigationHistoryIndex].path == url.path {
+           navigationHistory[navigationHistoryIndex] == url {
             updateNavigationAvailability()
             return
         }
@@ -213,6 +318,14 @@ final class WorkspaceViewModel: NSObject, ObservableObject {
     private func updateNavigationAvailability() {
         canNavigateBack = navigationHistoryIndex > 0
         canNavigateForward = navigationHistoryIndex >= 0 && navigationHistoryIndex < navigationHistory.count - 1
+    }
+
+    private func normalizedURL(for url: URL) -> URL {
+        if url.isFileURL {
+            return url.standardizedFileURL
+        }
+
+        return url
     }
 
     @objc private func handleExternalChangeTimer() {

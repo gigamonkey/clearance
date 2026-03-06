@@ -7,20 +7,66 @@ struct RecentFileEntry: Codable, Equatable, Identifiable {
     var id: String { path }
 
     var displayName: String {
-        URL(fileURLWithPath: path).lastPathComponent
+        let component = fileURL.lastPathComponent
+        if !component.isEmpty, component != "/" {
+            return component
+        }
+
+        if !fileURL.isFileURL,
+           let host = fileURL.host,
+           !host.isEmpty {
+            return host
+        }
+
+        return path
     }
 
     var directoryPath: String {
-        fileURL.deletingLastPathComponent().path
+        if fileURL.isFileURL {
+            return fileURL.deletingLastPathComponent().path
+        }
+
+        let directoryURL: URL
+        if fileURL.pathExtension.isEmpty {
+            directoryURL = fileURL
+        } else {
+            directoryURL = fileURL.deletingLastPathComponent()
+        }
+
+        if let components = URLComponents(url: directoryURL, resolvingAgainstBaseURL: false),
+           let host = components.host {
+            let remotePath = components.path.isEmpty ? "/" : components.path
+            return "\(host)\(remotePath)"
+        }
+
+        return directoryURL.absoluteString
     }
 
     var fileURL: URL {
-        URL(fileURLWithPath: path)
+        if let parsedURL = URL(string: path),
+           parsedURL.scheme != nil {
+            return parsedURL
+        }
+
+        return URL(fileURLWithPath: path)
     }
 
     init(path: String, lastOpenedAt: Date = .now) {
         self.path = path
         self.lastOpenedAt = lastOpenedAt
+    }
+
+    init(url: URL, lastOpenedAt: Date = .now) {
+        self.path = Self.storageKey(for: url)
+        self.lastOpenedAt = lastOpenedAt
+    }
+
+    static func storageKey(for url: URL) -> String {
+        if url.isFileURL {
+            return url.standardizedFileURL.path
+        }
+
+        return url.absoluteString
     }
 
     enum CodingKeys: String, CodingKey {

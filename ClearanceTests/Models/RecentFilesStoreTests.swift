@@ -57,4 +57,21 @@ final class RecentFilesStoreTests: XCTestCase {
         XCTAssertEqual(store.entries.first?.path, "/tmp/legacy.md")
         XCTAssertEqual(store.entries.first?.lastOpenedAt, .distantPast)
     }
+
+    func testRecentStoreSupportsRemoteURLKeys() {
+        let suite = "RecentFilesStoreTests-5"
+        let defaults = UserDefaults(suiteName: suite)!
+        defaults.removePersistentDomain(forName: suite)
+
+        let store = RecentFilesStore(userDefaults: defaults, storageKey: "recent")
+        let remoteURL = URL(string: "https://example.com/docs")!
+        store.add(url: remoteURL)
+        store.add(url: URL(fileURLWithPath: "/tmp/local.md"))
+        store.add(url: remoteURL)
+
+        XCTAssertEqual(store.entries.first?.path, "https://example.com/docs")
+        XCTAssertEqual(store.entries.first?.fileURL, remoteURL)
+        XCTAssertEqual(store.entries.filter { $0.path == "https://example.com/docs" }.count, 1)
+        XCTAssertNotEqual(store.entries.first?.path, remoteURL.path)
+    }
 }
