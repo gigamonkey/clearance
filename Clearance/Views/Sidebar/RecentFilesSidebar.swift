@@ -70,15 +70,22 @@ struct RecentFilesSidebar: View {
     }
 
     private func row(for entry: RecentFileEntry) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(entry.displayName)
-                .font(.body)
-                .lineLimit(1)
-            Text(entry.directoryPath)
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: entry.fileURL.isFileURL ? "doc.text" : "globe")
                 .font(.caption)
                 .foregroundStyle(.secondary)
-                .lineLimit(1)
-                .truncationMode(.middle)
+                .frame(width: 14, alignment: .leading)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(entry.displayName)
+                    .font(.body)
+                    .lineLimit(1)
+                Text(entry.directoryPath)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .contentShape(Rectangle())
@@ -91,23 +98,32 @@ struct RecentFilesSidebar: View {
 
     @ViewBuilder
     private func contextMenuActions(for entry: RecentFileEntry) -> some View {
-        Button("Open In New Window") {
-            selectedPath = entry.path
-            onOpenInNewWindow(entry)
-        }
+        if entry.fileURL.isFileURL {
+            Button("Open In New Window") {
+                selectedPath = entry.path
+                onOpenInNewWindow(entry)
+            }
 
-        Divider()
+            Divider()
 
-        Button("Reveal in Finder") {
-            selectedPath = entry.path
-            NSWorkspace.shared.activateFileViewerSelecting([entry.fileURL])
-        }
+            Button("Reveal in Finder") {
+                selectedPath = entry.path
+                NSWorkspace.shared.activateFileViewerSelecting([entry.fileURL])
+            }
 
-        Button("Copy Path to File") {
-            selectedPath = entry.path
-            let pasteboard = NSPasteboard.general
-            pasteboard.clearContents()
-            pasteboard.setString(entry.path, forType: .string)
+            Button("Copy Path to File") {
+                selectedPath = entry.path
+                let pasteboard = NSPasteboard.general
+                pasteboard.clearContents()
+                pasteboard.setString(entry.path, forType: .string)
+            }
+        } else {
+            Button("Copy URL") {
+                selectedPath = entry.path
+                let pasteboard = NSPasteboard.general
+                pasteboard.clearContents()
+                pasteboard.setString(entry.fileURL.absoluteString, forType: .string)
+            }
         }
     }
 }

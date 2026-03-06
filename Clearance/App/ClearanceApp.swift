@@ -52,6 +52,7 @@ struct WorkspaceCommandActions {
     let findInDocument: () -> Bool
     let findPreviousInDocument: () -> Bool
     let printDocument: () -> Bool
+    let hasActiveDocument: Bool
     let hasActiveSession: Bool
     let canUndoInDocument: Bool
     let canRedoInDocument: Bool
@@ -117,7 +118,7 @@ private struct ClearanceCommands: Commands {
                 }
             }
             .keyboardShortcut("p")
-            .disabled(actions?.hasActiveSession != true)
+            .disabled(actions?.hasActiveDocument != true)
         }
 
         CommandGroup(replacing: .undoRedo) {
@@ -173,7 +174,7 @@ private struct ClearanceCommands: Commands {
                 }
             }
             .keyboardShortcut("f")
-            .disabled(actions?.hasActiveSession != true)
+            .disabled(actions?.hasActiveDocument != true)
 
             Button("Find Previous") {
                 if let findPreviousInDocument = actions?.findPreviousInDocument {
@@ -185,7 +186,7 @@ private struct ClearanceCommands: Commands {
                 }
             }
             .keyboardShortcut("f", modifiers: [.command, .shift])
-            .disabled(actions?.hasActiveSession != true)
+            .disabled(actions?.hasActiveDocument != true)
         }
 
         CommandGroup(after: .sidebar) {
@@ -193,7 +194,7 @@ private struct ClearanceCommands: Commands {
                 actions?.showViewMode()
             }
             .keyboardShortcut("1")
-            .disabled(actions?.hasActiveSession != true)
+            .disabled(actions?.hasActiveDocument != true)
 
             Button("Edit Mode") {
                 actions?.showEditMode()

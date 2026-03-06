@@ -19,6 +19,13 @@ final class WorkspaceViewModel: NSObject, ObservableObject {
     @Published private(set) var canNavigateForward = false
 
     let recentFilesStore: RecentFilesStore
+    var hasActiveDocument: Bool {
+        activeSession != nil || activeRemoteDocument != nil
+    }
+
+    var isActiveDocumentRemote: Bool {
+        activeRemoteDocument != nil
+    }
 
     var activeDocumentURL: URL? {
         activeRemoteDocument?.requestedURL ?? activeSession?.url
@@ -93,8 +100,7 @@ final class WorkspaceViewModel: NSObject, ObservableObject {
 
         openRemote(
             url: normalizedURL,
-            recordNavigation: recordNavigation,
-            resetModeToDefault: resetModeToDefault
+            recordNavigation: recordNavigation
         )
         return true
     }
@@ -127,7 +133,7 @@ final class WorkspaceViewModel: NSObject, ObservableObject {
         }
     }
 
-    private func openRemote(url: URL, recordNavigation: Bool, resetModeToDefault: Bool) {
+    private func openRemote(url: URL, recordNavigation: Bool) {
         remoteLoadTask?.cancel()
         remoteLoadTask = nil
         remoteLoadGeneration += 1
@@ -136,11 +142,10 @@ final class WorkspaceViewModel: NSObject, ObservableObject {
         activeSession = nil
         isLoadingRemoteDocument = true
         activeRemoteDocument = RemoteDocumentFetcher.resolveForMarkdownRequest(url)
+        windowTitle = addressableTitle(for: url)
         recentFilesStore.add(url: url)
         selectedRecentPath = RecentFileEntry.storageKey(for: url)
-        if resetModeToDefault {
-            mode = appSettings.defaultOpenMode
-        }
+        mode = .view
         if recordNavigation {
             pushNavigationEntry(url)
         } else {
@@ -301,7 +306,7 @@ final class WorkspaceViewModel: NSObject, ObservableObject {
 
     private func pushNavigationEntry(_ url: URL) {
         if navigationHistoryIndex >= 0,
-           navigationHistory[navigationHistoryIndex] == url {
+           navigationKey(for: navigationHistory[navigationHistoryIndex]) == navigationKey(for: url) {
             updateNavigationAvailability()
             return
         }
@@ -325,7 +330,27 @@ final class WorkspaceViewModel: NSObject, ObservableObject {
             return url.standardizedFileURL
         }
 
-        return url
+        return url.standardized
+    }
+
+    private func navigationKey(for url: URL) -> String {
+        RecentFileEntry.storageKey(for: normalizedURL(for: url))
+    }
+
+    private func addressableTitle(for url: URL) -> String {
+        if url.isFileURL {
+            return url.lastPathComponent
+        }
+
+        if !url.lastPathComponent.isEmpty {
+            return url.lastPathComponent
+        }
+
+        if let host = url.host, !host.isEmpty {
+            return host
+        }
+
+        return url.absoluteString
     }
 
     @objc private func handleExternalChangeTimer() {

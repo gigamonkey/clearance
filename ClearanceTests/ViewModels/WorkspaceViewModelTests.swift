@@ -12,6 +12,8 @@ final class WorkspaceViewModelTests: XCTestCase {
         viewModel.open(url: fileURL)
 
         XCTAssertEqual(viewModel.activeSession?.url.path, fileURL.path)
+        XCTAssertTrue(viewModel.hasActiveDocument)
+        XCTAssertFalse(viewModel.isActiveDocumentRemote)
     }
 
     func testOpenURLInsertsRecentAtTop() throws {
@@ -155,11 +157,15 @@ final class WorkspaceViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.activeDocumentURL, requestedURL)
         XCTAssertEqual(viewModel.activeRenderURL, renderURL)
         XCTAssertTrue(viewModel.isLoadingRemoteDocument)
+        XCTAssertTrue(viewModel.hasActiveDocument)
+        XCTAssertTrue(viewModel.isActiveDocumentRemote)
 
         try await Task.sleep(nanoseconds: 80_000_000)
         XCTAssertEqual(viewModel.activeDocumentURL, requestedURL)
         XCTAssertEqual(viewModel.activeRenderURL, renderURL)
         XCTAssertFalse(viewModel.isLoadingRemoteDocument)
+        XCTAssertTrue(viewModel.hasActiveDocument)
+        XCTAssertTrue(viewModel.isActiveDocumentRemote)
     }
 
     func testLatestRemoteRequestWins() async throws {
@@ -213,12 +219,16 @@ final class WorkspaceViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.activeDocumentURL, remoteRequestedURL)
         XCTAssertEqual(viewModel.activeRenderURL, remoteRenderURL)
         XCTAssertNil(viewModel.activeSession)
+        XCTAssertTrue(viewModel.hasActiveDocument)
+        XCTAssertTrue(viewModel.isActiveDocumentRemote)
 
         XCTAssertTrue(viewModel.navigateBack())
         XCTAssertEqual(viewModel.activeSession?.url.path, localURL.path)
         XCTAssertEqual(viewModel.activeDocumentURL, localURL)
         XCTAssertEqual(viewModel.activeRenderURL, localURL)
         XCTAssertTrue(viewModel.canNavigateForward)
+        XCTAssertTrue(viewModel.hasActiveDocument)
+        XCTAssertFalse(viewModel.isActiveDocumentRemote)
 
         XCTAssertTrue(viewModel.navigateForward())
         await Task.yield()
