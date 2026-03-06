@@ -126,7 +126,7 @@ struct RecentFilesSidebar: View {
 
             Divider()
 
-            Button("Remove from Sidebar") {
+            Button("Remove from History") {
                 selectedPath = entry.path
                 onRemoveFromSidebar(entry)
             }
@@ -140,7 +140,7 @@ struct RecentFilesSidebar: View {
 
             Divider()
 
-            Button("Remove from Sidebar") {
+            Button("Remove from History") {
                 selectedPath = entry.path
                 onRemoveFromSidebar(entry)
             }
