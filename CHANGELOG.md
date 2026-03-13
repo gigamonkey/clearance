@@ -1,5 +1,10 @@
 # Clearance Changelog
 
+## 1.2.3 - March 13, 2026
+
+- Fixed in-document GFM anchor links so links like `#the-anchor-tag` scroll within the current file instead of opening the containing folder in Finder.
+- Improved table rendering by allowing markdown tables to size columns naturally while preserving the metadata table layout.
+
 ## 1.2.2 - March 10, 2026
 
 - Improved checklist indentation so task list checkboxes align more naturally with their text.
