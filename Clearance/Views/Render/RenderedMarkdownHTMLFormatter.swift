@@ -55,7 +55,9 @@ struct RenderedMarkdownHTMLFormatter: MarkupWalker {
     }
 
     mutating func visitHeading(_ heading: Heading) {
-        result += "<h\(heading.level)>\(escapeText(heading.plainText))</h\(heading.level)>\n"
+        result += "<h\(heading.level)>"
+        descendInto(heading)
+        result += "</h\(heading.level)>\n"
     }
 
     mutating func visitThematicBreak(_ thematicBreak: ThematicBreak) {
