@@ -29,6 +29,8 @@ struct SidebarContainerView: View {
     let onDeleteProject: (Project) -> Void
     let onAddDirectory: (Project) -> Void
     let onRemoveDirectory: (Project, String) -> Void
+    let onExcludeDirectory: (Project, String) -> Void
+    let onIncludeDirectory: (Project, String) -> Void
 
     private var activeTab: SidebarTab {
         pickerTab ?? selectedTab
@@ -82,7 +84,9 @@ struct SidebarContainerView: View {
                     onRenameProject: onRenameProject,
                     onDeleteProject: onDeleteProject,
                     onAddDirectory: onAddDirectory,
-                    onRemoveDirectory: onRemoveDirectory
+                    onRemoveDirectory: onRemoveDirectory,
+                    onExcludeDirectory: onExcludeDirectory,
+                    onIncludeDirectory: onIncludeDirectory
                 )
                 .opacity(activeTab == .projects ? 1 : 0)
                 .accessibilityHidden(activeTab != .projects)

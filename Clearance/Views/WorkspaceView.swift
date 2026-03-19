@@ -53,7 +53,9 @@ struct WorkspaceView: View {
                 onRenameProject: { viewModel.renameProject($0, newName: $1) },
                 onDeleteProject: { viewModel.deleteProject($0) },
                 onAddDirectory: { viewModel.addDirectoryToProject($0) },
-                onRemoveDirectory: { viewModel.removeDirectoryFromProject($0, path: $1) }
+                onRemoveDirectory: { viewModel.removeDirectoryFromProject($0, path: $1) },
+                onExcludeDirectory: { viewModel.excludeDirectoryFromProject($0, path: $1) },
+                onIncludeDirectory: { viewModel.includeDirectoryInProject($0, path: $1) }
             )
         } detail: {
             Group {

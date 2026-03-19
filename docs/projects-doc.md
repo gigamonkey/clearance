@@ -7,21 +7,31 @@ The Projects sidebar lets you organize markdown files into named projects. Each 
 1. Switch to the **Projects** tab using the segmented control at the top of the sidebar.
 2. Click the **+** button to create a new project. Type a name and press Return.
 3. Select the project by clicking its name, then click the **folder icon** that appears in the toolbar to add a directory.
-4. Markdown files in that directory (and its subdirectories) appear in the sidebar immediately.
+4. Supported files (`.md`, `.markdown`, and `.txt`) in that directory and its subdirectories appear in the sidebar immediately.
 
 ## Managing Projects
 
 - **Rename** — right-click a project name and choose *Rename*, then type the new name.
-- **Delete** — right-click a project name and choose *Delete*.
+- **Delete** — right-click a project name and choose *Delete Project*.
 - **Reorder** — drag projects up or down in the list.
 
 ## Managing Directories
 
-- **Add a directory** — select a project, then click the folder icon in the toolbar. Pick a folder in the file chooser.
-- **Remove a directory** — right-click the directory header within a project and choose *Remove Folder*.
-- **Reveal in Finder** — right-click a directory header and choose *Reveal in Finder*.
+- **Add a directory** — select a project, then click the folder icon in the toolbar, or right-click the project name and choose *Add Folder*.
+- **Remove a directory** — right-click the project name and choose *Remove Folder*, then select the directory to remove.
+- **Exclude a subdirectory** — right-click any subdirectory within a project and choose *Exclude from Project*. The directory and its contents will be hidden from the file tree.
+- **Re-include an excluded directory** — right-click the project name and choose *Re-include Folder*, then select the directory to restore.
+- **Reveal in Finder** — right-click any directory and choose *Reveal in Finder*.
+
+If you add a directory that is a parent of an existing directory in the project, the child directory is automatically removed since it's already covered by the parent.
 
 When a project has multiple directories, Clearance finds their common parent path and displays it next to the project name (e.g., **Bells — ~/hacks/bells/plans**). The file tree is rooted at the level below that common parent so you don't see redundant nesting.
+
+## File Filtering
+
+In directories that are part of a git repository, Clearance uses `git ls-files` to enumerate files. This means files and directories listed in `.gitignore` are automatically excluded from the sidebar. For non-git directories, common dependency directories (like `node_modules`, `.venv`, `build`, etc.) are skipped automatically.
+
+Files are sorted case-sensitively with files listed before subdirectories in each directory.
 
 ## Working with Files
 
@@ -37,7 +47,7 @@ Right-click a file for additional options:
 
 - Click the disclosure arrow next to a project name to collapse or expand the entire project.
 - Click the disclosure arrow next to any subdirectory to collapse or expand it.
-- Directories with more than 10 files start collapsed by default; smaller directories start expanded.
+- New directories start expanded by default.
 - Expand/collapse state is remembered while the app is running.
 
 ## Live Updates
@@ -46,4 +56,4 @@ Clearance watches your project directories for changes. If you add, rename, move
 
 ## Persistence
 
-Your projects and their directories are saved automatically. Quit and relaunch Clearance and everything will be right where you left it. The selected sidebar tab (History or Projects) is also remembered across launches.
+Your projects, their directories, and any excluded paths are saved automatically. Quit and relaunch Clearance and everything will be right where you left it. The selected sidebar tab (History or Projects) is also remembered across launches.

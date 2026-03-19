@@ -14,6 +14,8 @@ struct ProjectsSidebar: View {
     let onDeleteProject: (Project) -> Void
     let onAddDirectory: (Project) -> Void
     let onRemoveDirectory: (Project, String) -> Void
+    let onExcludeDirectory: (Project, String) -> Void
+    let onIncludeDirectory: (Project, String) -> Void
 
     @State private var editingProjectID: UUID?
     @State private var editingName = ""
@@ -152,6 +154,26 @@ struct ProjectsSidebar: View {
                         onAddDirectory(project)
                     }
 
+                    if !project.directoryPaths.isEmpty {
+                        Menu("Remove Folder") {
+                            ForEach(project.directoryPaths, id: \.self) { path in
+                                Button(Self.abbreviatedPath(path)) {
+                                    onRemoveDirectory(project, path)
+                                }
+                            }
+                        }
+                    }
+
+                    if !project.excludedPaths.isEmpty {
+                        Menu("Re-include Folder") {
+                            ForEach(project.excludedPaths, id: \.self) { path in
+                                Button(Self.abbreviatedPath(path)) {
+                                    onIncludeDirectory(project, path)
+                                }
+                            }
+                        }
+                    }
+
                     Divider()
 
                     Button("Delete Project") {
@@ -179,6 +201,7 @@ struct ProjectsSidebar: View {
                         selectedPath: $selectedPath,
                         onOpenInNewWindow: onOpenInNewWindow,
                         onRemoveDirectory: onRemoveDirectory,
+                        onExcludeDirectory: onExcludeDirectory,
                         projects: projects
                     )
                 } else {
@@ -194,6 +217,7 @@ struct ProjectsSidebar: View {
                                 selectedPath: $selectedPath,
                                 onOpenInNewWindow: onOpenInNewWindow,
                                 onRemoveDirectory: onRemoveDirectory,
+                                onExcludeDirectory: onExcludeDirectory,
                                 projects: projects
                             )
                         } else {
@@ -315,6 +339,7 @@ struct DirectoryNodeView: View {
     @Binding var selectedPath: String?
     let onOpenInNewWindow: (ProjectFileNode) -> Void
     let onRemoveDirectory: (Project, String) -> Void
+    let onExcludeDirectory: (Project, String) -> Void
     let projects: [Project]
 
     var body: some View {
@@ -331,6 +356,7 @@ struct DirectoryNodeView: View {
                         selectedPath: $selectedPath,
                         onOpenInNewWindow: onOpenInNewWindow,
                         onRemoveDirectory: onRemoveDirectory,
+                        onExcludeDirectory: onExcludeDirectory,
                         projects: projects
                     )
                 } else {
@@ -353,6 +379,12 @@ struct DirectoryNodeView: View {
                             projects.first { $0.id == projectID }!,
                             node.path
                         )
+                    }
+                }
+
+                Button("Exclude from Project") {
+                    if let project = projects.first(where: { $0.id == projectID }) {
+                        onExcludeDirectory(project, node.path)
                     }
                 }
 

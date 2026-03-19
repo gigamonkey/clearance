@@ -51,11 +51,21 @@ final class ProjectStore: ObservableObject {
             return
         }
 
-        guard !projects[index].directoryPaths.contains(path) else {
+        let normalizedPath = path.hasSuffix("/") ? String(path.dropLast()) : path
+
+        // Don't add if already covered by an existing parent directory
+        if projects[index].directoryPaths.contains(where: { parent in
+            normalizedPath.hasPrefix(parent + "/") || normalizedPath == parent
+        }) {
             return
         }
 
-        projects[index].directoryPaths.append(path)
+        // Remove any existing subdirectories that the new path covers
+        projects[index].directoryPaths.removeAll { existing in
+            existing.hasPrefix(normalizedPath + "/")
+        }
+
+        projects[index].directoryPaths.append(normalizedPath)
         persist()
     }
 
@@ -68,6 +78,34 @@ final class ProjectStore: ObservableObject {
         projects[index].directoryPaths.removeAll { $0 == path }
 
         guard projects[index].directoryPaths.count != priorCount else {
+            return
+        }
+
+        persist()
+    }
+
+    func excludeDirectory(from projectID: UUID, path: String) {
+        guard let index = projects.firstIndex(where: { $0.id == projectID }) else {
+            return
+        }
+
+        guard !projects[index].excludedPaths.contains(path) else {
+            return
+        }
+
+        projects[index].excludedPaths.append(path)
+        persist()
+    }
+
+    func includeDirectory(in projectID: UUID, path: String) {
+        guard let index = projects.firstIndex(where: { $0.id == projectID }) else {
+            return
+        }
+
+        let priorCount = projects[index].excludedPaths.count
+        projects[index].excludedPaths.removeAll { $0 == path }
+
+        guard projects[index].excludedPaths.count != priorCount else {
             return
         }
 

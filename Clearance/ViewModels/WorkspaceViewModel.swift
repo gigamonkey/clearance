@@ -508,7 +508,8 @@ final class WorkspaceViewModel: NSObject, ObservableObject {
         projects = projectStore.projects
 
         let allPaths = Set(projectStore.projects.flatMap(\.directoryPaths))
-        directoryMonitor.updateMonitoredDirectories(allPaths)
+        let allExcluded = Set(projectStore.projects.flatMap(\.excludedPaths))
+        directoryMonitor.updateMonitoredDirectories(allPaths, excludedPaths: allExcluded)
 
         projectsCancellable = projectStore.$projects
             .sink { [weak self] projects in
@@ -517,7 +518,8 @@ final class WorkspaceViewModel: NSObject, ObservableObject {
                 }
 
                 let paths = Set(projects.flatMap(\.directoryPaths))
-                self.directoryMonitor.updateMonitoredDirectories(paths)
+                let excluded = Set(projects.flatMap(\.excludedPaths))
+                self.directoryMonitor.updateMonitoredDirectories(paths, excludedPaths: excluded)
             }
 
         projectsMirrorCancellable = projectStore.$projects
@@ -563,5 +565,13 @@ final class WorkspaceViewModel: NSObject, ObservableObject {
 
     func removeDirectoryFromProject(_ project: Project, path: String) {
         projectStore.removeDirectory(from: project.id, path: path)
+    }
+
+    func excludeDirectoryFromProject(_ project: Project, path: String) {
+        projectStore.excludeDirectory(from: project.id, path: path)
+    }
+
+    func includeDirectoryInProject(_ project: Project, path: String) {
+        projectStore.includeDirectory(in: project.id, path: path)
     }
 }

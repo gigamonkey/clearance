@@ -6,11 +6,15 @@ final class DirectoryMonitor: ObservableObject {
     @Published private(set) var treesByDirectory: [String: ProjectFileNode] = [:]
 
     private var monitoredPaths: Set<String> = []
+    private var excludedPaths: Set<String> = []
     private var eventStream: FSEventStreamRef?
-    private let supportedExtensions: Set<String> = ["md", "markdown"]
+    private let supportedExtensions: Set<String> = ["md", "markdown", "txt"]
 
-    func updateMonitoredDirectories(_ paths: Set<String>) {
-        guard paths != monitoredPaths else {
+    func updateMonitoredDirectories(_ paths: Set<String>, excludedPaths: Set<String> = []) {
+        let excludedChanged = excludedPaths != self.excludedPaths
+        self.excludedPaths = excludedPaths
+
+        if paths == monitoredPaths && !excludedChanged {
             return
         }
 
@@ -31,7 +35,7 @@ final class DirectoryMonitor: ObservableObject {
             return
         }
 
-        let pathsToEnumerate = paths.subtracting(previousPaths)
+        let pathsToEnumerate = excludedChanged ? paths : paths.subtracting(previousPaths)
         if !pathsToEnumerate.isEmpty {
             enumerateDirectories(pathsToEnumerate)
         }
@@ -55,11 +59,12 @@ final class DirectoryMonitor: ObservableObject {
 
     private func enumerateDirectories(_ paths: Set<String>) {
         let extensions = supportedExtensions
+        let excluded = excludedPaths
 
         Self.backgroundQueue.async { [weak self] in
             var results: [String: ProjectFileNode] = [:]
             for path in paths {
-                results[path] = DirectoryMonitor.enumerateDirectory(path, supportedExtensions: extensions)
+                results[path] = DirectoryMonitor.enumerateDirectory(path, supportedExtensions: extensions, excludedPaths: excluded)
             }
 
             DispatchQueue.main.async {
@@ -79,6 +84,7 @@ final class DirectoryMonitor: ObservableObject {
     fileprivate func reenumerateAffectedPaths(_ changedPaths: [String]) {
         let roots = monitoredPaths
         let extensions = supportedExtensions
+        let excluded = excludedPaths
 
         var affectedRoots: Set<String> = []
         for changedPath in changedPaths {
@@ -94,7 +100,7 @@ final class DirectoryMonitor: ObservableObject {
         Self.backgroundQueue.async { [weak self] in
             var results: [String: ProjectFileNode] = [:]
             for root in affectedRoots {
-                results[root] = DirectoryMonitor.enumerateDirectory(root, supportedExtensions: extensions)
+                results[root] = DirectoryMonitor.enumerateDirectory(root, supportedExtensions: extensions, excludedPaths: excluded)
             }
 
             DispatchQueue.main.async {
@@ -113,12 +119,13 @@ final class DirectoryMonitor: ObservableObject {
 
     nonisolated private static func enumerateDirectory(
         _ directoryPath: String,
-        supportedExtensions: Set<String>
+        supportedExtensions: Set<String>,
+        excludedPaths: Set<String>
     ) -> ProjectFileNode {
         let rootURL = URL(fileURLWithPath: directoryPath)
 
         // Try git ls-files first — respects .gitignore
-        if let gitFiles = gitListFiles(in: directoryPath, supportedExtensions: supportedExtensions) {
+        if let gitFiles = gitListFiles(in: directoryPath, supportedExtensions: supportedExtensions, excludedPaths: excludedPaths) {
             return buildTreeFromPaths(
                 rootPath: directoryPath,
                 rootName: rootURL.lastPathComponent,
@@ -127,13 +134,14 @@ final class DirectoryMonitor: ObservableObject {
         }
 
         // Fall back to FileManager enumeration for non-git directories
-        return enumerateDirectoryWithFileManager(directoryPath, supportedExtensions: supportedExtensions)
+        return enumerateDirectoryWithFileManager(directoryPath, supportedExtensions: supportedExtensions, excludedPaths: excludedPaths)
     }
 
     /// Use `git ls-files` to list tracked and untracked non-ignored files.
     nonisolated private static func gitListFiles(
         in directoryPath: String,
-        supportedExtensions: Set<String>
+        supportedExtensions: Set<String>,
+        excludedPaths: Set<String>
     ) -> [String]? {
         // Check if this is inside a git repo
         let gitCheck = Process()
@@ -176,7 +184,13 @@ final class DirectoryMonitor: ObservableObject {
         let relativePaths = output.split(separator: "\n", omittingEmptySubsequences: true)
         let rootPath = directoryPath.hasSuffix("/") ? directoryPath : directoryPath + "/"
 
-        return relativePaths.map { rootPath + $0 }
+        let excludedPrefixes = excludedPaths.map { $0.hasSuffix("/") ? $0 : $0 + "/" }
+
+        return relativePaths
+            .map { rootPath + $0 }
+            .filter { path in
+                !excludedPrefixes.contains { path.hasPrefix($0) }
+            }
     }
 
     nonisolated private static func buildTreeFromPaths(
@@ -213,7 +227,8 @@ final class DirectoryMonitor: ObservableObject {
 
     nonisolated private static func enumerateDirectoryWithFileManager(
         _ directoryPath: String,
-        supportedExtensions: Set<String>
+        supportedExtensions: Set<String>,
+        excludedPaths: Set<String>
     ) -> ProjectFileNode {
         let rootURL = URL(fileURLWithPath: directoryPath)
         var filesByDirectory: [String: [ProjectFileNode]] = [:]
@@ -237,7 +252,7 @@ final class DirectoryMonitor: ObservableObject {
             }
 
             if values.isDirectory == true {
-                if skippedDirectoryNames.contains(url.lastPathComponent) {
+                if skippedDirectoryNames.contains(url.lastPathComponent) || excludedPaths.contains(url.path) {
                     enumerator.skipDescendants()
                 }
                 continue
@@ -287,7 +302,7 @@ final class DirectoryMonitor: ObservableObject {
             var children: [ProjectFileNode] = []
 
             if let files = filesByDirectory[dirPath] {
-                children.append(contentsOf: files.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending })
+                children.append(contentsOf: files.sorted { $0.name < $1.name })
             }
 
             let childDirPaths = allDirectoryPaths.filter {
@@ -313,7 +328,7 @@ final class DirectoryMonitor: ObservableObject {
 
         if let rootFiles = filesByDirectory[rootPath] {
             rootChildren.append(contentsOf: rootFiles.sorted {
-                $0.name.localizedStandardCompare($1.name) == .orderedAscending
+                $0.name < $1.name
             })
         }
 
