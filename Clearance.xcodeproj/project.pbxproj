@@ -79,6 +79,7 @@
 		F20FA5F1008FA007703D89B9 /* codemirror.min.css in Resources */ = {isa = PBXBuildFile; fileRef = 1283095CF7B7E91F3E092744 /* codemirror.min.css */; };
 		F98B84588030978CFABA8184 /* RenderedMarkdownView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E25A6153BF3FEF55B6AC020 /* RenderedMarkdownView.swift */; };
 		AA11BB22CC33DD44EE55FF02 /* Project.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11BB22CC33DD44EE55FF01 /* Project.swift */; };
+		AA11BB22CC33DD44EE55FF0E /* SidebarExpansionState.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11BB22CC33DD44EE55FF0D /* SidebarExpansionState.swift */; };
 		AA11BB22CC33DD44EE55FF04 /* ProjectFileNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11BB22CC33DD44EE55FF03 /* ProjectFileNode.swift */; };
 		AA11BB22CC33DD44EE55FF06 /* ProjectStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11BB22CC33DD44EE55FF05 /* ProjectStore.swift */; };
 		AA11BB22CC33DD44EE55FF08 /* DirectoryMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11BB22CC33DD44EE55FF07 /* DirectoryMonitor.swift */; };
@@ -178,6 +179,7 @@
 		AA11BB22CC33DD44EE55FF07 /* DirectoryMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DirectoryMonitor.swift; sourceTree = "<group>"; };
 		AA11BB22CC33DD44EE55FF09 /* ProjectsSidebar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectsSidebar.swift; sourceTree = "<group>"; };
 		AA11BB22CC33DD44EE55FF0B /* SidebarContainerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarContainerView.swift; sourceTree = "<group>"; };
+		AA11BB22CC33DD44EE55FF0D /* SidebarExpansionState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarExpansionState.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -514,6 +516,7 @@
 				AA11BB22CC33DD44EE55FF03 /* ProjectFileNode.swift */,
 				AA11BB22CC33DD44EE55FF05 /* ProjectStore.swift */,
 				5BAB78E34398153FEC9E98E6 /* RecentFileEntry.swift */,
+				AA11BB22CC33DD44EE55FF0D /* SidebarExpansionState.swift */,
 				268A560042FDA86DCDDEC8C9 /* RecentFilesStore.swift */,
 				B29CC9D7F42CDF29ED53EE3A /* RemoteDocument.swift */,
 				41316671B9239418D2FEFB25 /* WorkspaceMode.swift */,
@@ -694,6 +697,7 @@
 				F98B84588030978CFABA8184 /* RenderedMarkdownView.swift in Sources */,
 				B92216E2C64C1F77FB9194E5 /* SettingsView.swift in Sources */,
 				AA11BB22CC33DD44EE55FF0C /* SidebarContainerView.swift in Sources */,
+				AA11BB22CC33DD44EE55FF0E /* SidebarExpansionState.swift in Sources */,
 				B95EA8B4970673C5C1ACFFA1 /* SparkleConfiguration.swift in Sources */,
 				20C2BEFEF6BFBFFC016BC852 /* SparkleUpdateController.swift in Sources */,
 				1D2A93755ECD7CF7E00C4FA3 /* WorkspaceMode.swift in Sources */,

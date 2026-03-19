@@ -25,10 +25,12 @@ final class WorkspaceViewModel: NSObject, ObservableObject {
     @Published var selectedProjectFilePath: String?
     @Published private(set) var projects: [Project] = []
     @Published private(set) var directoryTrees: [String: ProjectFileNode] = [:]
+    @Published private(set) var expandedPaths: Set<String> = []
 
     let recentFilesStore: RecentFilesStore
     let projectStore: ProjectStore
     let directoryMonitor: DirectoryMonitor
+    let sidebarExpansionState: SidebarExpansionState
     var hasActiveDocument: Bool {
         activeSession != nil || activeRemoteDocument != nil
     }
@@ -59,6 +61,7 @@ final class WorkspaceViewModel: NSObject, ObservableObject {
     private var projectsCancellable: AnyCancellable?
     private var projectsMirrorCancellable: AnyCancellable?
     private var treesMirrorCancellable: AnyCancellable?
+    private var expansionMirrorCancellable: AnyCancellable?
 
     init(
         recentFilesStore: RecentFilesStore = RecentFilesStore(),
@@ -73,6 +76,7 @@ final class WorkspaceViewModel: NSObject, ObservableObject {
         self.recentFilesStore = recentFilesStore
         self.projectStore = projectStore
         self.directoryMonitor = directoryMonitor
+        self.sidebarExpansionState = SidebarExpansionState()
         self.openPanelService = openPanelService
         self.appSettings = appSettings
         self.remoteDocumentLoader = remoteDocumentLoader
@@ -523,6 +527,11 @@ final class WorkspaceViewModel: NSObject, ObservableObject {
         treesMirrorCancellable = directoryMonitor.$treesByDirectory
             .receive(on: DispatchQueue.main)
             .sink { [weak self] in self?.directoryTrees = $0 }
+
+        expandedPaths = sidebarExpansionState.expandedPaths
+        expansionMirrorCancellable = sidebarExpansionState.$expandedPaths
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] in self?.expandedPaths = $0 }
     }
 
     @discardableResult

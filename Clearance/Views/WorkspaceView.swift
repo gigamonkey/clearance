@@ -45,6 +45,8 @@ struct WorkspaceView: View {
                 projects: viewModel.projects,
                 treesByDirectory: viewModel.directoryTrees,
                 selectedProjectFilePath: $viewModel.selectedProjectFilePath,
+                expansionState: viewModel.sidebarExpansionState,
+                expandedPaths: viewModel.expandedPaths,
                 onSelectProjectFile: { viewModel.openProjectFile($0) },
                 onOpenProjectFileInNewWindow: { popOutProjectFile($0) },
                 onCreateProject: { return viewModel.createProject() },

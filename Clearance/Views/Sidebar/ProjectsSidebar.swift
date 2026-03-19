@@ -5,6 +5,8 @@ struct ProjectsSidebar: View {
     let projects: [Project]
     let treesByDirectory: [String: ProjectFileNode]
     @Binding var selectedPath: String?
+    let expansionState: SidebarExpansionState
+    let expandedPaths: Set<String>
     let onSelectFile: (ProjectFileNode) -> Void
     let onOpenInNewWindow: (ProjectFileNode) -> Void
     let onCreateProject: () -> UUID?
@@ -111,18 +113,22 @@ struct ProjectsSidebar: View {
     private func projectContent(for project: Project) -> some View {
         ForEach(project.directoryPaths, id: \.self) { dirPath in
             if let tree = treesByDirectory[dirPath] {
-                OutlineGroup(tree, children: \.outlineChildren) { node in
-                    if node.isDirectory {
-                        directoryLabel(for: node, isRoot: node.path == dirPath, projectID: project.id)
-                    } else {
-                        fileRow(for: node)
-                    }
-                }
+                DirectoryNodeView(
+                    node: tree,
+                    isRoot: true,
+                    projectID: project.id,
+                    expansionState: expansionState,
+                    expandedPaths: expandedPaths,
+                    selectedPath: $selectedPath,
+                    onOpenInNewWindow: onOpenInNewWindow,
+                    onRemoveDirectory: onRemoveDirectory,
+                    projects: projects
+                )
             } else {
                 HStack(spacing: 6) {
                     ProgressView()
                         .controlSize(.small)
-                    Text(abbreviatedPath(dirPath))
+                    Text(Self.abbreviatedPath(dirPath))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -139,33 +145,105 @@ struct ProjectsSidebar: View {
         .controlSize(.small)
     }
 
-    private func directoryLabel(
-        for node: ProjectFileNode,
-        isRoot: Bool,
-        projectID: UUID
-    ) -> some View {
-        Label {
-            Text(isRoot ? abbreviatedPath(node.path) : node.name)
-                .lineLimit(1)
-                .truncationMode(.middle)
-        } icon: {
-            Image(systemName: "folder")
-                .foregroundStyle(.secondary)
+    private func findFileNode(path: String) -> ProjectFileNode? {
+        for (_, tree) in treesByDirectory {
+            if let found = findInTree(tree, path: path) {
+                return found
+            }
         }
-        .contextMenu {
-            if isRoot {
-                Button("Remove Folder") {
-                    onRemoveDirectory(
-                        projects.first { $0.id == projectID }!,
-                        node.path
+
+        return nil
+    }
+
+    private func findInTree(_ node: ProjectFileNode, path: String) -> ProjectFileNode? {
+        if node.path == path {
+            return node
+        }
+
+        for child in node.children {
+            if let found = findInTree(child, path: path) {
+                return found
+            }
+        }
+
+        return nil
+    }
+
+    fileprivate static func abbreviatedPath(_ path: String) -> String {
+        let home = NSHomeDirectory()
+        if path.hasPrefix(home) {
+            return "~" + path.dropFirst(home.count)
+        }
+
+        return path
+    }
+}
+
+/// Separate struct to allow recursive DisclosureGroup without opaque return type issues.
+private struct DirectoryNodeView: View {
+    let node: ProjectFileNode
+    let isRoot: Bool
+    let projectID: UUID
+    let expansionState: SidebarExpansionState
+    let expandedPaths: Set<String>
+    @Binding var selectedPath: String?
+    let onOpenInNewWindow: (ProjectFileNode) -> Void
+    let onRemoveDirectory: (Project, String) -> Void
+    let projects: [Project]
+
+    var body: some View {
+        DisclosureGroup(isExpanded: expansionBinding) {
+            ForEach(node.children) { child in
+                if child.isDirectory {
+                    DirectoryNodeView(
+                        node: child,
+                        isRoot: false,
+                        projectID: projectID,
+                        expansionState: expansionState,
+                        expandedPaths: expandedPaths,
+                        selectedPath: $selectedPath,
+                        onOpenInNewWindow: onOpenInNewWindow,
+                        onRemoveDirectory: onRemoveDirectory,
+                        projects: projects
                     )
+                } else {
+                    fileRow(for: child)
                 }
             }
+        } label: {
+            Label {
+                Text(isRoot ? ProjectsSidebar.abbreviatedPath(node.path) : node.name)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+            } icon: {
+                Image(systemName: "folder")
+                    .foregroundStyle(.secondary)
+            }
+            .contextMenu {
+                if isRoot {
+                    Button("Remove Folder") {
+                        onRemoveDirectory(
+                            projects.first { $0.id == projectID }!,
+                            node.path
+                        )
+                    }
+                }
 
-            Button("Reveal in Finder") {
-                NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: node.path)
+                Button("Reveal in Finder") {
+                    NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: node.path)
+                }
             }
         }
+        .onAppear {
+            expansionState.expandIfUnknown(node.path)
+        }
+    }
+
+    private var expansionBinding: Binding<Bool> {
+        Binding(
+            get: { expandedPaths.contains(node.path) },
+            set: { expansionState.setExpanded(node.path, expanded: $0) }
+        )
     }
 
     private func fileRow(for node: ProjectFileNode) -> some View {
@@ -203,38 +281,5 @@ struct ProjectsSidebar: View {
             }
         }
         .draggable(node.path)
-    }
-
-    private func findFileNode(path: String) -> ProjectFileNode? {
-        for (_, tree) in treesByDirectory {
-            if let found = findInTree(tree, path: path) {
-                return found
-            }
-        }
-
-        return nil
-    }
-
-    private func findInTree(_ node: ProjectFileNode, path: String) -> ProjectFileNode? {
-        if node.path == path {
-            return node
-        }
-
-        for child in node.children {
-            if let found = findInTree(child, path: path) {
-                return found
-            }
-        }
-
-        return nil
-    }
-
-    private func abbreviatedPath(_ path: String) -> String {
-        let home = NSHomeDirectory()
-        if path.hasPrefix(home) {
-            return "~" + path.dropFirst(home.count)
-        }
-
-        return path
     }
 }

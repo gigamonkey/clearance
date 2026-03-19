@@ -19,6 +19,8 @@ struct SidebarContainerView: View {
     let projects: [Project]
     let treesByDirectory: [String: ProjectFileNode]
     @Binding var selectedProjectFilePath: String?
+    let expansionState: SidebarExpansionState
+    let expandedPaths: Set<String>
     let onSelectProjectFile: (ProjectFileNode) -> Void
     let onOpenProjectFileInNewWindow: (ProjectFileNode) -> Void
     let onCreateProject: () -> UUID?
@@ -55,6 +57,8 @@ struct SidebarContainerView: View {
                     projects: projects,
                     treesByDirectory: treesByDirectory,
                     selectedPath: $selectedProjectFilePath,
+                    expansionState: expansionState,
+                    expandedPaths: expandedPaths,
                     onSelectFile: onSelectProjectFile,
                     onOpenInNewWindow: onOpenProjectFileInNewWindow,
                     onCreateProject: onCreateProject,
