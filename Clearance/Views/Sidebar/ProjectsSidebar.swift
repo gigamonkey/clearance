@@ -17,6 +17,7 @@ struct ProjectsSidebar: View {
 
     @State private var editingProjectID: UUID?
     @State private var editingName = ""
+    @State private var selectedProjectID: UUID?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -26,10 +27,22 @@ struct ProjectsSidebar: View {
 
                 Spacer()
 
+                if let projectID = selectedProjectID,
+                   let project = projects.first(where: { $0.id == projectID }) {
+                    Button {
+                        onAddDirectory(project)
+                    } label: {
+                        Label("Add Folder", systemImage: "folder.badge.plus")
+                    }
+                    .buttonStyle(.borderless)
+                    .controlSize(.small)
+                }
+
                 Button {
                     if let newID = onCreateProject() {
                         editingName = "New Project"
                         editingProjectID = newID
+                        selectedProjectID = newID
                     }
                 } label: {
                     Label("New Project", systemImage: "plus")
@@ -60,6 +73,8 @@ struct ProjectsSidebar: View {
                 }
                 .listStyle(.sidebar)
                 .onChange(of: selectedPath) { _, newPath in
+                    selectedProjectID = nil
+
                     guard let newPath else {
                         return
                     }
@@ -90,6 +105,23 @@ struct ProjectsSidebar: View {
                 }
         } else {
             Text(project.name)
+                .padding(.horizontal, 4)
+                .padding(.vertical, 2)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(
+                    RoundedRectangle(cornerRadius: 5, style: .continuous)
+                        .fill(selectedProjectID == project.id
+                              ? Color.accentColor.opacity(0.2)
+                              : Color.clear)
+                )
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    if selectedProjectID == project.id {
+                        selectedProjectID = nil
+                    } else {
+                        selectedProjectID = project.id
+                    }
+                }
                 .contextMenu {
                     Button("Rename…") {
                         editingName = project.name
@@ -135,14 +167,12 @@ struct ProjectsSidebar: View {
             }
         }
 
-        Button {
-            onAddDirectory(project)
-        } label: {
-            Label("Add Folder…", systemImage: "folder.badge.plus")
+    }
+
+    private func projectOwning(path: String) -> Project? {
+        projects.first { project in
+            project.directoryPaths.contains { path.hasPrefix($0) }
         }
-        .buttonStyle(.borderless)
-        .foregroundStyle(.secondary)
-        .controlSize(.small)
     }
 
     private func findFileNode(path: String) -> ProjectFileNode? {
