@@ -73,7 +73,9 @@ struct ProjectsSidebar: View {
                 }
                 .listStyle(.sidebar)
                 .onChange(of: selectedPath) { _, newPath in
-                    selectedProjectID = nil
+                    DispatchQueue.main.async {
+                        selectedProjectID = nil
+                    }
 
                     guard let newPath else {
                         return

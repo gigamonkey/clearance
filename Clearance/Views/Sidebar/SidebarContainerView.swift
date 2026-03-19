@@ -1,12 +1,13 @@
 import SwiftUI
 
 enum SidebarTab: String, CaseIterable {
-    case history = "History"
     case projects = "Projects"
+    case history = "History"
 }
 
 struct SidebarContainerView: View {
     @Binding var selectedTab: SidebarTab
+    @State private var pickerTab: SidebarTab?
 
     let recentEntries: [RecentFileEntry]
     @Binding var selectedRecentPath: String?
@@ -29,9 +30,21 @@ struct SidebarContainerView: View {
     let onAddDirectory: (Project) -> Void
     let onRemoveDirectory: (Project, String) -> Void
 
+    private var activeTab: SidebarTab {
+        pickerTab ?? selectedTab
+    }
+
     var body: some View {
         VStack(spacing: 0) {
-            Picker("", selection: $selectedTab) {
+            Picker("", selection: Binding(
+                get: { pickerTab ?? selectedTab },
+                set: { newTab in
+                    pickerTab = newTab
+                    DispatchQueue.main.async {
+                        selectedTab = newTab
+                    }
+                }
+            )) {
                 ForEach(SidebarTab.allCases, id: \.self) { tab in
                     Text(tab.rawValue).tag(tab)
                 }
@@ -40,9 +53,11 @@ struct SidebarContainerView: View {
             .padding(.horizontal, 10)
             .padding(.top, 8)
             .padding(.bottom, 4)
+            .onChange(of: selectedTab) { _, newTab in
+                pickerTab = nil
+            }
 
-            switch selectedTab {
-            case .history:
+            ZStack {
                 RecentFilesSidebar(
                     entries: recentEntries,
                     selectedPath: $selectedRecentPath,
@@ -52,7 +67,9 @@ struct SidebarContainerView: View {
                     onOpenInNewWindow: onOpenRecentInNewWindow,
                     onRemoveFromSidebar: onRemoveFromHistory
                 )
-            case .projects:
+                .opacity(activeTab == .history ? 1 : 0)
+                .accessibilityHidden(activeTab != .history)
+
                 ProjectsSidebar(
                     projects: projects,
                     treesByDirectory: treesByDirectory,
@@ -67,6 +84,8 @@ struct SidebarContainerView: View {
                     onAddDirectory: onAddDirectory,
                     onRemoveDirectory: onRemoveDirectory
                 )
+                .opacity(activeTab == .projects ? 1 : 0)
+                .accessibilityHidden(activeTab != .projects)
             }
         }
     }
