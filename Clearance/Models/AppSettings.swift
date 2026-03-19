@@ -222,12 +222,19 @@ final class AppSettings: ObservableObject {
         }
     }
 
+    @Published var sidebarTab: SidebarTab {
+        didSet {
+            userDefaults.set(sidebarTab.rawValue, forKey: sidebarTabStorageKey)
+        }
+    }
+
     private let userDefaults: UserDefaults
     private let openModeStorageKey: String
     private let themeStorageKey: String
     private let appearanceStorageKey: String
     private let renderedTextScaleStorageKey: String
     private let releaseNotesVersionStorageKey: String
+    private let sidebarTabStorageKey: String
 
     init(
         userDefaults: UserDefaults = .standard,
@@ -235,7 +242,8 @@ final class AppSettings: ObservableObject {
         themeStorageKey: String = "theme",
         appearanceStorageKey: String = "appearance",
         renderedTextScaleStorageKey: String = "renderedTextScale",
-        releaseNotesVersionStorageKey: String = "releaseNotesVersion"
+        releaseNotesVersionStorageKey: String = "releaseNotesVersion",
+        sidebarTabStorageKey: String = "sidebarTab"
     ) {
         self.userDefaults = userDefaults
         self.openModeStorageKey = storageKey
@@ -243,6 +251,7 @@ final class AppSettings: ObservableObject {
         self.appearanceStorageKey = appearanceStorageKey
         self.renderedTextScaleStorageKey = renderedTextScaleStorageKey
         self.releaseNotesVersionStorageKey = releaseNotesVersionStorageKey
+        self.sidebarTabStorageKey = sidebarTabStorageKey
 
         if let stored = userDefaults.string(forKey: storageKey),
            let mode = WorkspaceMode(rawValue: stored) {
@@ -270,6 +279,13 @@ final class AppSettings: ObservableObject {
             renderedTextScale = storedTextScale
         } else {
             renderedTextScale = 1.0
+        }
+
+        if let storedTab = userDefaults.string(forKey: sidebarTabStorageKey),
+           let parsedTab = SidebarTab(rawValue: storedTab) {
+            sidebarTab = parsedTab
+        } else {
+            sidebarTab = .history
         }
     }
 

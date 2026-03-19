@@ -22,8 +22,13 @@ final class WorkspaceViewModel: NSObject, ObservableObject {
     @Published private(set) var canNavigateBack = false
     @Published private(set) var canNavigateForward = false
     @Published private(set) var pendingFolderImport: PendingFolderImport?
+    @Published var selectedProjectFilePath: String?
+    @Published private(set) var projects: [Project] = []
+    @Published private(set) var directoryTrees: [String: ProjectFileNode] = [:]
 
     let recentFilesStore: RecentFilesStore
+    let projectStore: ProjectStore
+    let directoryMonitor: DirectoryMonitor
     var hasActiveDocument: Bool {
         activeSession != nil || activeRemoteDocument != nil
     }
@@ -51,9 +56,14 @@ final class WorkspaceViewModel: NSObject, ObservableObject {
     private var navigationHistory: [URL] = []
     private var navigationHistoryIndex = -1
     private let folderImportConfirmationThreshold = 10
+    private var projectsCancellable: AnyCancellable?
+    private var projectsMirrorCancellable: AnyCancellable?
+    private var treesMirrorCancellable: AnyCancellable?
 
     init(
         recentFilesStore: RecentFilesStore = RecentFilesStore(),
+        projectStore: ProjectStore = ProjectStore(),
+        directoryMonitor: DirectoryMonitor = DirectoryMonitor(),
         openPanelService: OpenPanelServicing = OpenPanelService(),
         appSettings: AppSettings = AppSettings(),
         remoteDocumentLoader: @escaping @Sendable (URL) async throws -> RemoteDocument = { requestedURL in
@@ -61,12 +71,15 @@ final class WorkspaceViewModel: NSObject, ObservableObject {
         }
     ) {
         self.recentFilesStore = recentFilesStore
+        self.projectStore = projectStore
+        self.directoryMonitor = directoryMonitor
         self.openPanelService = openPanelService
         self.appSettings = appSettings
         self.remoteDocumentLoader = remoteDocumentLoader
         mode = appSettings.defaultOpenMode
         windowTitle = "Clearance"
         super.init()
+        bindProjectStoreToMonitor()
     }
 
     deinit {
@@ -483,5 +496,63 @@ final class WorkspaceViewModel: NSObject, ObservableObject {
         }
 
         session.checkForExternalChanges()
+    }
+
+    // MARK: - Projects
+
+    private func bindProjectStoreToMonitor() {
+        projects = projectStore.projects
+
+        let allPaths = Set(projectStore.projects.flatMap(\.directoryPaths))
+        directoryMonitor.updateMonitoredDirectories(allPaths)
+
+        projectsCancellable = projectStore.$projects
+            .sink { [weak self] projects in
+                guard let self else {
+                    return
+                }
+
+                let paths = Set(projects.flatMap(\.directoryPaths))
+                self.directoryMonitor.updateMonitoredDirectories(paths)
+            }
+
+        projectsMirrorCancellable = projectStore.$projects
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] in self?.projects = $0 }
+
+        treesMirrorCancellable = directoryMonitor.$treesByDirectory
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] in self?.directoryTrees = $0 }
+    }
+
+    @discardableResult
+    func openProjectFile(_ node: ProjectFileNode) -> DocumentSession? {
+        open(url: node.fileURL)
+    }
+
+    @discardableResult
+    func createProject() -> UUID {
+        let project = projectStore.addProject(name: "New Project")
+        return project.id
+    }
+
+    func deleteProject(_ project: Project) {
+        projectStore.removeProject(id: project.id)
+    }
+
+    func renameProject(_ project: Project, newName: String) {
+        projectStore.renameProject(id: project.id, newName: newName)
+    }
+
+    func addDirectoryToProject(_ project: Project) {
+        guard let url = openPanelService.chooseDirectory() else {
+            return
+        }
+
+        projectStore.addDirectory(to: project.id, path: url.path)
+    }
+
+    func removeDirectoryFromProject(_ project: Project, path: String) {
+        projectStore.removeDirectory(from: project.id, path: path)
     }
 }

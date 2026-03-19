@@ -376,4 +376,8 @@ private final class MockOpenPanelService: OpenPanelServicing {
     func chooseMarkdownFile() -> URL? {
         openItemURL
     }
+
+    func chooseDirectory() -> URL? {
+        nil
+    }
 }
