@@ -62,6 +62,7 @@ final class WorkspaceViewModel: NSObject, ObservableObject {
     private var projectsMirrorCancellable: AnyCancellable?
     private var treesMirrorCancellable: AnyCancellable?
     private var expansionMirrorCancellable: AnyCancellable?
+    private var fileTypesCancellable: AnyCancellable?
 
     init(
         recentFilesStore: RecentFilesStore = RecentFilesStore(),
@@ -344,7 +345,7 @@ final class WorkspaceViewModel: NSObject, ObservableObject {
     }
 
     private func queueOrImportFolder(at folderURL: URL) -> DocumentSession? {
-        let urls = Self.folderImportURLs(in: folderURL)
+        let urls = Self.folderImportURLs(in: folderURL, supportedExtensions: appSettings.enabledFileTypes)
         guard !urls.isEmpty else {
             return nil
         }
@@ -374,8 +375,7 @@ final class WorkspaceViewModel: NSObject, ObservableObject {
         return (try? url.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true
     }
 
-    private static func folderImportURLs(in folderURL: URL) -> [URL] {
-        let supportedExtensions: Set<String> = ["md", "markdown", "txt"]
+    private static func folderImportURLs(in folderURL: URL, supportedExtensions: Set<String>) -> [URL] {
         var urlsWithDates: [(url: URL, modificationDate: Date)] = []
 
         guard let enumerator = FileManager.default.enumerator(
@@ -507,9 +507,17 @@ final class WorkspaceViewModel: NSObject, ObservableObject {
     private func bindProjectStoreToMonitor() {
         projects = projectStore.projects
 
+        directoryMonitor.updateSupportedExtensions(appSettings.enabledFileTypes)
+
         let allPaths = Set(projectStore.projects.flatMap(\.directoryPaths))
         let allExcluded = Set(projectStore.projects.flatMap(\.excludedPaths))
         directoryMonitor.updateMonitoredDirectories(allPaths, excludedPaths: allExcluded)
+
+        fileTypesCancellable = appSettings.$enabledFileTypes
+            .dropFirst()
+            .sink { [weak self] types in
+                self?.directoryMonitor.updateSupportedExtensions(types)
+            }
 
         projectsCancellable = projectStore.$projects
             .sink { [weak self] projects in

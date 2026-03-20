@@ -228,6 +228,18 @@ final class AppSettings: ObservableObject {
         }
     }
 
+    @Published var enabledFileTypes: Set<String> {
+        didSet {
+            userDefaults.set(Array(enabledFileTypes), forKey: enabledFileTypesStorageKey)
+        }
+    }
+
+    static let allFileTypes: [(extension: String, label: String)] = [
+        ("md", "Markdown (.md)"),
+        ("markdown", "Markdown (.markdown)"),
+        ("txt", "Plain Text (.txt)"),
+    ]
+
     private let userDefaults: UserDefaults
     private let openModeStorageKey: String
     private let themeStorageKey: String
@@ -235,6 +247,7 @@ final class AppSettings: ObservableObject {
     private let renderedTextScaleStorageKey: String
     private let releaseNotesVersionStorageKey: String
     private let sidebarTabStorageKey: String
+    private let enabledFileTypesStorageKey: String
 
     init(
         userDefaults: UserDefaults = .standard,
@@ -243,7 +256,8 @@ final class AppSettings: ObservableObject {
         appearanceStorageKey: String = "appearance",
         renderedTextScaleStorageKey: String = "renderedTextScale",
         releaseNotesVersionStorageKey: String = "releaseNotesVersion",
-        sidebarTabStorageKey: String = "sidebarTab"
+        sidebarTabStorageKey: String = "sidebarTab",
+        enabledFileTypesStorageKey: String = "enabledFileTypes"
     ) {
         self.userDefaults = userDefaults
         self.openModeStorageKey = storageKey
@@ -252,6 +266,7 @@ final class AppSettings: ObservableObject {
         self.renderedTextScaleStorageKey = renderedTextScaleStorageKey
         self.releaseNotesVersionStorageKey = releaseNotesVersionStorageKey
         self.sidebarTabStorageKey = sidebarTabStorageKey
+        self.enabledFileTypesStorageKey = enabledFileTypesStorageKey
 
         if let stored = userDefaults.string(forKey: storageKey),
            let mode = WorkspaceMode(rawValue: stored) {
@@ -286,6 +301,12 @@ final class AppSettings: ObservableObject {
             sidebarTab = parsedTab
         } else {
             sidebarTab = .history
+        }
+
+        if let storedTypes = userDefaults.stringArray(forKey: enabledFileTypesStorageKey) {
+            enabledFileTypes = Set(storedTypes)
+        } else {
+            enabledFileTypes = Set(AppSettings.allFileTypes.map(\.extension))
         }
     }
 

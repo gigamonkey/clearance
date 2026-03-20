@@ -8,7 +8,15 @@ final class DirectoryMonitor: ObservableObject {
     private var monitoredPaths: Set<String> = []
     private var excludedPaths: Set<String> = []
     private var eventStream: FSEventStreamRef?
-    private let supportedExtensions: Set<String> = ["md", "markdown", "txt"]
+    private(set) var supportedExtensions: Set<String> = ["md", "markdown", "txt"]
+
+    func updateSupportedExtensions(_ extensions: Set<String>) {
+        guard extensions != supportedExtensions else { return }
+        supportedExtensions = extensions
+        if !monitoredPaths.isEmpty {
+            enumerateAllDirectories()
+        }
+    }
 
     func updateMonitoredDirectories(_ paths: Set<String>, excludedPaths: Set<String> = []) {
         let excludedChanged = excludedPaths != self.excludedPaths
