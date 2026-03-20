@@ -1,5 +1,11 @@
 # Clearance Changelog
 
+## 1.2.4 - March 19, 2026
+
+- Fixed printing and Print to PDF so rendered markdown always uses a print-safe light palette instead of disappearing on white paper. Thanks to Harper Reed for the bug report in `#21`.
+- Dim unavailable local files in History and disable open-only actions for them while still allowing removal. Thanks to Peter Seibel for surfacing the missing-file cleanup problem in `#15`.
+- Adopted Rod Begbie's simpler app icon artwork from `#19` while keeping Clearance's existing generated `AppIcon.appiconset` pipeline.
+
 ## 1.2.3 - March 13, 2026
 
 - Fixed in-document GFM anchor links so links like `#the-anchor-tag` scroll within the current file instead of opening the containing folder in Finder.
