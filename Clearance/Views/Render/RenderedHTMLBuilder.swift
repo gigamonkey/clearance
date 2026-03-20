@@ -25,6 +25,7 @@ struct RenderedHTMLBuilder {
 
     func build(
         document: ParsedMarkdownDocument,
+        sourceDocumentURL: URL? = nil,
         theme: AppTheme = .apple,
         appearance: AppearancePreference = .system,
         textScale: Double = 1.0,
@@ -45,6 +46,7 @@ struct RenderedHTMLBuilder {
             scriptHashes: scripts.hashes,
             isRemoteContent: isRemoteContent
         )
+        let baseElement = htmlBaseElement(for: sourceDocumentURL)
 
         return """
         <!doctype html>
@@ -52,6 +54,7 @@ struct RenderedHTMLBuilder {
         <head>
           <meta charset=\"utf-8\" />
           <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />
+          \(baseElement)
           <meta http-equiv=\"Content-Security-Policy\" content=\"\(escapeHTML(contentSecurityPolicy))\" />
           <style>
           \(themedStylesheet(theme: theme, appearance: appearance, textScale: textScale))
@@ -67,6 +70,14 @@ struct RenderedHTMLBuilder {
         </body>
         </html>
         """
+    }
+
+    private func htmlBaseElement(for sourceDocumentURL: URL?) -> String {
+        guard let sourceDocumentURL else {
+            return ""
+        }
+
+        return "<base href=\"\(escapeHTML(sourceDocumentURL.absoluteString))\" />"
     }
 
     func buildPrintHTML(

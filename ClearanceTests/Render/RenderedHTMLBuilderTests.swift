@@ -36,13 +36,25 @@ final class RenderedHTMLBuilderTests: XCTestCase {
         XCTAssertFalse(html.contains("\nth {\n  width: 30%;"))
     }
 
-    func testRenderedMarkdownUsesDocumentURLAsNavigationBaseURL() {
+    func testRenderedMarkdownUsesDocumentDirectoryAsNavigationBaseURL() {
         let sourceURL = URL(fileURLWithPath: "/tmp/docs/root.md")
 
         XCTAssertEqual(
             RenderedMarkdownView.navigationBaseURL(for: sourceURL),
-            sourceURL
+            sourceURL.deletingLastPathComponent()
         )
+    }
+
+    func testRenderedMarkdownIncludesDocumentBaseHref() {
+        let document = ParsedMarkdownDocument(body: "# Heading", flattenedFrontmatter: [:])
+        let sourceURL = URL(fileURLWithPath: "/tmp/docs/root.md")
+
+        let html = RenderedHTMLBuilder().build(
+            document: document,
+            sourceDocumentURL: sourceURL
+        )
+
+        XCTAssertTrue(html.contains("<base href=\"file:///tmp/docs/root.md\" />"))
     }
 
     func testPrintHTMLUsesLightPalette() {
@@ -118,6 +130,17 @@ final class RenderedHTMLBuilderTests: XCTestCase {
         XCTAssertTrue(html.contains(".markdown img"))
         XCTAssertTrue(html.contains("max-width: 100%"))
         XCTAssertTrue(html.contains("height: auto"))
+    }
+
+    func testRenderedMarkdownIncludesImageSourceAttributes() {
+        let document = ParsedMarkdownDocument(
+            body: "![Diagram](https://example.com/diagram.png)",
+            flattenedFrontmatter: [:]
+        )
+
+        let html = RenderedHTMLBuilder().build(document: document)
+
+        XCTAssertTrue(html.contains("<img src=\"https://example.com/diagram.png\""))
     }
 
     func testDarkAppearanceUsesSelectedThemeDarkPalette() {
@@ -321,6 +344,56 @@ final class RenderedHTMLBuilderTests: XCTestCase {
         )
 
         XCTAssertEqual(didOpen, true)
+    }
+
+    @MainActor
+    func testRelativeLocalImagesLoadInWebView() async throws {
+        let directoryURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: directoryURL, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directoryURL) }
+
+        let imageURL = directoryURL.appendingPathComponent("diagram.png")
+        try tinyPNGData().write(to: imageURL)
+
+        let sourceURL = directoryURL.appendingPathComponent("notes.md")
+        let webView = try await makeLoadedWebView(
+            for: "![Diagram](diagram.png)",
+            sourceDocumentURL: sourceURL,
+            baseURL: RenderedMarkdownView.navigationBaseURL(for: sourceURL)
+        )
+
+        try await waitForJavaScriptCondition(
+            """
+            (() => {
+              const image = document.querySelector('img');
+              return !!image && image.complete && image.naturalWidth > 0;
+            })()
+            """,
+            in: webView
+        )
+    }
+
+    @MainActor
+    func testSameDocumentAnchorsResolveAgainstSourceDocumentURL() async throws {
+        let sourceURL = URL(fileURLWithPath: "/tmp/docs/root.md")
+        let webView = try await makeLoadedWebView(
+            for: """
+            [Build and Run](#build-and-run)
+
+            ## Build and Run
+            """,
+            sourceDocumentURL: sourceURL,
+            baseURL: RenderedMarkdownView.navigationBaseURL(for: sourceURL)
+        )
+
+        let resolvesToDocumentURL = try await evaluateJavaScriptBoolean(
+            """
+            (() => document.querySelector('a')?.href === 'file:///tmp/docs/root.md#build-and-run')()
+            """,
+            in: webView
+        )
+
+        XCTAssertEqual(resolvesToDocumentURL, true)
     }
 
     func testRenderedDiagramsIncludeReusableOverlayScaffolding() {
@@ -578,13 +651,20 @@ final class RenderedHTMLBuilderTests: XCTestCase {
     }
 
     @MainActor
-    private func makeLoadedWebView(for body: String) async throws -> WKWebView {
+    private func makeLoadedWebView(
+        for body: String,
+        sourceDocumentURL: URL? = nil,
+        baseURL: URL = URL(fileURLWithPath: "/")
+    ) async throws -> WKWebView {
         let document = ParsedMarkdownDocument(body: body, flattenedFrontmatter: [:])
-        let html = RenderedHTMLBuilder().build(document: document)
+        let html = RenderedHTMLBuilder().build(
+            document: document,
+            sourceDocumentURL: sourceDocumentURL
+        )
         let webView = WKWebView(frame: .init(x: 0, y: 0, width: 1200, height: 900))
         let navigationDelegate = TestNavigationDelegate()
         webView.navigationDelegate = navigationDelegate
-        webView.loadHTMLString(html, baseURL: URL(fileURLWithPath: "/"))
+        webView.loadHTMLString(html, baseURL: baseURL)
         try await navigationDelegate.waitForLoad()
         return webView
     }
@@ -625,6 +705,14 @@ final class RenderedHTMLBuilderTests: XCTestCase {
                 }
             }
         }
+    }
+
+    private func tinyPNGData() throws -> Data {
+        let base64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9WZx5V0AAAAASUVORK5CYII="
+        guard let data = Data(base64Encoded: base64) else {
+            throw NSError(domain: "RenderedHTMLBuilderTests", code: 1)
+        }
+        return data
     }
 }
 
