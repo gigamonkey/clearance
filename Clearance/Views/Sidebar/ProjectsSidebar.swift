@@ -129,8 +129,7 @@ struct ProjectsSidebar: View {
                 Text(project.name)
                     .foregroundStyle(.primary)
                 if !project.directoryPaths.isEmpty {
-                    Text(" — ")
-                        .foregroundStyle(.tertiary)
+                    Text("  ")
                     Text(Self.abbreviatedPath(commonParentPath(for: project)))
                         .foregroundStyle(.tertiary)
                         .lineLimit(1)
