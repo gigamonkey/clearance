@@ -1,6 +1,15 @@
 # Clearance Changelog
 
-## Unreleased
+## 1.3.0 - March 21, 2026
+
+- Migrated Clearance to the `com.primeradiant.Clearance` app identity, and now import existing settings and History from older `com.jesse.Clearance` installs on first launch so the transition stays clean.
+- Replaced the app-bundled CLI symlink install with a bundled `ClearanceCLIInstaller.pkg` that installs a standalone `clearance` command-line tool into `/usr/local/bin`, so the CLI keeps working even if the app moves. Thanks to Rod Begbie for the original CLI request in `#16` and the follow-up bug reports in `#25` and `#26`.
+- Added a one-time migration installer package to the release pipeline so this version can replace older `/Applications/Clearance.app` installs cleanly during the bundle-ID transition.
+- Fixed rendered document View mode so the diagram overlay stays hidden until it is opened, instead of leaking a lone `Close` button into the page. Thanks to `earchibald` for the bug report in `#23`.
+
+## 1.2.7 - March 20, 2026
+
+- Fixed rendered image loading for markdown documents by restoring correct resource resolution for sibling files while preserving in-document heading links. Thanks to Christian Metts for the bug report in `#22`.
 
 ## 1.2.6 - March 19, 2026
 

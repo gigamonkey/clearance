@@ -1,6 +1,6 @@
 name: Clearance
 options:
-  bundleIdPrefix: com.jesse
+  bundleIdPrefix: com.primeradiant
   deploymentTarget:
     macOS: 14.0
 packages:
@@ -23,13 +23,13 @@ targets:
         buildPhase: resources
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.jesse.Clearance
+        PRODUCT_BUNDLE_IDENTIFIER: com.primeradiant.Clearance
         INFOPLIST_FILE: Clearance/App/Info.plist
         SWIFT_VERSION: 6.0
         CODE_SIGN_STYLE: Automatic
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
-        MARKETING_VERSION: 1.2.6
-        CURRENT_PROJECT_VERSION: 11
+        MARKETING_VERSION: 1.3.0
+        CURRENT_PROJECT_VERSION: 13
         SPARKLE_FEED_URL: ""
         SPARKLE_PUBLIC_ED_KEY: ""
     dependencies:
@@ -42,6 +42,19 @@ targets:
         copy:
           destination: wrapper
           subpath: Contents/Helpers
+    postBuildScripts:
+      - name: Build CLI Installer Package
+        script: |
+          set -euo pipefail
+          "$PROJECT_DIR/Packaging/build-cli-installer-pkg.sh" \
+            "$BUILT_PRODUCTS_DIR/clearance" \
+            "$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/ClearanceCLIInstaller.pkg" \
+            "$MARKETING_VERSION" \
+            "${DEVELOPER_ID_INSTALLER_SIGNING_IDENTITY:-}"
+        inputFiles:
+          - $(BUILT_PRODUCTS_DIR)/clearance
+        outputFiles:
+          - $(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/ClearanceCLIInstaller.pkg
   ClearanceCLI:
     type: tool
     platform: macOS
@@ -53,17 +66,20 @@ targets:
     settings:
       base:
         PRODUCT_NAME: clearance
+        PRODUCT_MODULE_NAME: ClearanceCLI
         SWIFT_VERSION: 6.0
   ClearanceTests:
     type: bundle.unit-test
     platform: macOS
     sources:
       - path: ClearanceTests
+      - path: docs/demo-corpus
+        buildPhase: resources
     dependencies:
       - target: Clearance
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.jesse.ClearanceTests
+        PRODUCT_BUNDLE_IDENTIFIER: com.primeradiant.ClearanceTests
         GENERATE_INFOPLIST_FILE: YES
         SWIFT_VERSION: 6.0
 schemes:

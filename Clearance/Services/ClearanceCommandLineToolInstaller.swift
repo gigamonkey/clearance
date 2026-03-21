@@ -1,38 +1,48 @@
+import AppKit
 import Foundation
 
 enum ClearanceCommandLineToolInstallerError: LocalizedError, Equatable {
-    case existingInstallIsNotASymlink(URL)
+    case bundledInstallerNotFound
+    case installerLaunchFailed(URL)
 
     var errorDescription: String? {
         switch self {
-        case .existingInstallIsNotASymlink(let url):
-            return "\(url.path) already exists and is not a symlink."
+        case .bundledInstallerNotFound:
+            return "Bundled command-line installer package not found."
+        case .installerLaunchFailed(let url):
+            return "Could not open \(url.lastPathComponent) in Installer."
         }
     }
 }
 
+protocol WorkspaceOpening {
+    func open(_ url: URL) -> Bool
+}
+
+extension NSWorkspace: WorkspaceOpening {}
+
 struct ClearanceCommandLineToolInstaller {
-    static let installURL = URL(fileURLWithPath: "/usr/local/bin/clearance")
+    static let packageResourceName = "ClearanceCLIInstaller"
+    static let packageExtension = "pkg"
+    static let packageFileName = "\(packageResourceName).\(packageExtension)"
+
+    static func installerPackageURL(in bundle: Bundle = .main) -> URL? {
+        bundle.url(
+            forResource: packageResourceName,
+            withExtension: packageExtension
+        )
+    }
 
     static func install(
-        helperExecutableURL: URL,
-        at installURL: URL = installURL,
-        fileManager: FileManager = .default
+        bundle: Bundle = .main,
+        workspace: WorkspaceOpening = NSWorkspace.shared
     ) throws {
-        try fileManager.createDirectory(
-            at: installURL.deletingLastPathComponent(),
-            withIntermediateDirectories: true
-        )
-
-        if (try? fileManager.destinationOfSymbolicLink(atPath: installURL.path)) != nil {
-            try fileManager.removeItem(at: installURL)
-        } else if fileManager.fileExists(atPath: installURL.path) {
-            throw ClearanceCommandLineToolInstallerError.existingInstallIsNotASymlink(installURL)
+        guard let packageURL = installerPackageURL(in: bundle) else {
+            throw ClearanceCommandLineToolInstallerError.bundledInstallerNotFound
         }
 
-        try fileManager.createSymbolicLink(
-            at: installURL,
-            withDestinationURL: helperExecutableURL
-        )
+        guard workspace.open(packageURL) else {
+            throw ClearanceCommandLineToolInstallerError.installerLaunchFailed(packageURL)
+        }
     }
 }

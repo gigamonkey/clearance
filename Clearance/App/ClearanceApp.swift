@@ -1,13 +1,23 @@
 import AppKit
 import SwiftUI
 
+enum ExternalEventRouting {
+    static let preferring: Set<String> = ["*"]
+    static let allowing: Set<String> = ["*"]
+}
+
 @main
 struct ClearanceApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
-    @StateObject private var appSettings = AppSettings()
+    @StateObject private var appSettings: AppSettings
     @State private var hasCheckedForUpdatedReleaseNotes = false
     private let sparkleUpdateController = SparkleUpdateController()
     private let popoutWindowController = PopoutWindowController()
+
+    init() {
+        LegacyDefaultsMigration().migrateIfNeeded()
+        _appSettings = StateObject(wrappedValue: AppSettings())
+    }
 
     var body: some Scene {
         WindowGroup {
@@ -19,7 +29,10 @@ struct ClearanceApp: App {
             .onAppear {
                 showUpdatedReleaseNotesIfNeeded()
             }
-            .handlesExternalEvents(preferring: ["*"], allowing: ["*"])
+            .handlesExternalEvents(
+                preferring: ExternalEventRouting.preferring,
+                allowing: ExternalEventRouting.allowing
+            )
         }
         .windowToolbarStyle(.unified)
         .commands {

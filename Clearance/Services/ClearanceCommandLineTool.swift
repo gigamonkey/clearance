@@ -1,7 +1,15 @@
+import AppKit
 import Foundation
+
+protocol WorkspaceApplicationLocating {
+    func urlForApplication(withBundleIdentifier bundleIdentifier: String) -> URL?
+}
+
+extension NSWorkspace: WorkspaceApplicationLocating {}
 
 enum ClearanceCommandLineTool {
     static let name = "clearance"
+    static let appBundleIdentifier = "com.primeradiant.Clearance"
 
     static func helperExecutableURL(in bundle: Bundle = .main) -> URL? {
         let url = bundle.bundleURL
@@ -13,7 +21,8 @@ enum ClearanceCommandLineTool {
     }
 
     static func appBundleURL(forHelperExecutableURL url: URL) -> URL? {
-        let appURL = url
+        let resolvedHelperURL = url.resolvingSymlinksInPath()
+        let appURL = resolvedHelperURL
             .deletingLastPathComponent()
             .deletingLastPathComponent()
             .deletingLastPathComponent()
@@ -23,6 +32,17 @@ enum ClearanceCommandLineTool {
         }
 
         return appURL
+    }
+
+    static func appURL(
+        forExecutableURL url: URL,
+        workspace: WorkspaceApplicationLocating = NSWorkspace.shared
+    ) -> URL? {
+        if let bundledAppURL = appBundleURL(forHelperExecutableURL: url) {
+            return bundledAppURL
+        }
+
+        return workspace.urlForApplication(withBundleIdentifier: appBundleIdentifier)
     }
 
     static func documentURLs(

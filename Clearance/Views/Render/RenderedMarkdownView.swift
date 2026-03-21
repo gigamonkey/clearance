@@ -53,6 +53,7 @@ struct RenderedMarkdownView: NSViewRepresentable {
         )
         let html = builder.build(
             document: document,
+            sourceDocumentURL: sourceDocumentURL,
             theme: theme,
             appearance: appearance,
             textScale: textScale,
@@ -76,7 +77,7 @@ struct RenderedMarkdownView: NSViewRepresentable {
     }
 
     static func navigationBaseURL(for sourceDocumentURL: URL) -> URL {
-        sourceDocumentURL
+        sourceDocumentURL.deletingLastPathComponent()
     }
 
     final class Coordinator: NSObject, WKNavigationDelegate {

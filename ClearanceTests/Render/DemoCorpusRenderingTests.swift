@@ -2,17 +2,6 @@ import XCTest
 @testable import Clearance
 
 final class DemoCorpusRenderingTests: XCTestCase {
-    private var corpusDirectoryURL: URL {
-        repositoryRootURL.appendingPathComponent("docs/demo-corpus", isDirectory: true)
-    }
-
-    private var repositoryRootURL: URL {
-        URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-    }
-
     func testDemoCorpusContainsMultipleMarkdownFixtures() throws {
         let markdownURLs = try markdownFixtureURLs()
 
@@ -32,7 +21,7 @@ final class DemoCorpusRenderingTests: XCTestCase {
     }
 
     func testRichRenderingFixtureIncludesMathAndMermaidTransforms() throws {
-        let fixtureURL = corpusDirectoryURL.appendingPathComponent("01-rich-rendering.md")
+        let fixtureURL = try fixtureURL(named: "01-rich-rendering")
         let markdown = try String(contentsOf: fixtureURL)
         let parsed = FrontmatterParser().parse(markdown: markdown)
 
@@ -43,14 +32,16 @@ final class DemoCorpusRenderingTests: XCTestCase {
     }
 
     private func markdownFixtureURLs() throws -> [URL] {
-        let candidates = try FileManager.default.contentsOfDirectory(
-            at: corpusDirectoryURL,
-            includingPropertiesForKeys: nil,
-            options: [.skipsHiddenFiles]
-        )
+        let bundle = Bundle(for: DemoCorpusRenderingTests.self)
+        let candidates = bundle.urls(forResourcesWithExtension: "md", subdirectory: nil) ?? []
 
         return candidates
             .filter { $0.pathExtension.lowercased() == "md" }
             .sorted { $0.lastPathComponent < $1.lastPathComponent }
+    }
+
+    private func fixtureURL(named name: String) throws -> URL {
+        let bundle = Bundle(for: DemoCorpusRenderingTests.self)
+        return try XCTUnwrap(bundle.url(forResource: name, withExtension: "md"))
     }
 }
