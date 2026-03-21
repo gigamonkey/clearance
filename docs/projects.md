@@ -24,7 +24,7 @@ The Projects sidebar lets you organize markdown files into named projects. Each 
 
 If you add a directory that is a parent of an existing directory in the project, the file tree re-roots at the new parent. The child directory and its contents are still visible — they're just nested under the broader root.
 
-When a project has multiple directories, Clearance finds their common parent path and displays it next to the project name (e.g., **Bells — ~/hacks/bells/plans**). The file tree is rooted at the level below that common parent so you don't see redundant nesting.
+When a project has multiple directories, Clearance finds their common parent path and displays it next to the project name (e.g., **Bells ~/hacks/bells/plans**). The file tree is rooted at the level below that common parent so you don't see redundant nesting.
 
 ## File Types
 
