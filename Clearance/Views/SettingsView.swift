@@ -41,28 +41,31 @@ struct SettingsView: View {
 
             Divider()
 
-            VStack(alignment: .leading, spacing: 8) {
-                Picker("Install Location", selection: $installLocation) {
-                    ForEach(CLIInstallLocation.allCases) { location in
-                        Text(location.title).tag(location)
+            Picker("Install Location", selection: $installLocation) {
+                ForEach(CLIInstallLocation.allCases) { location in
+                    Text(location.title).tag(location)
+                }
+            }
+            .pickerStyle(.segmented)
+
+            LabeledContent("") {
+                VStack(alignment: .leading, spacing: 8) {
+                    Button("Install Command-Line Tool") {
+                        installCommandLineTool()
                     }
-                }
-                .pickerStyle(.segmented)
 
-                Button("Install Command-Line Tool") {
-                    installCommandLineTool()
-                }
-
-                Text(commandLineToolDescription)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                if let commandLineToolStatus {
-                    Text(commandLineToolStatus)
+                    Text(commandLineToolDescription)
                         .font(.caption)
-                        .foregroundStyle(commandLineToolStatusIsError ? .red : .secondary)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                         .fixedSize(horizontal: false, vertical: true)
+
+                    if let commandLineToolStatus {
+                        Text(commandLineToolStatus)
+                            .font(.caption)
+                            .foregroundStyle(commandLineToolStatusIsError ? .red : .secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 }
             }
         }
@@ -71,11 +74,12 @@ struct SettingsView: View {
     }
 
     private var commandLineToolDescription: String {
+        let prefix = "Adds clearance command-line script to open files and folders in Clearance."
         switch installLocation {
         case .usrLocalBin:
-            "Adds `clearance` to `/usr/local/bin` so Terminal can open files and folders in Clearance. Opens a package installer that may require admin privileges."
+            return "\(prefix) May require admin privileges."
         case .dotLocalBin:
-            "Adds `clearance` to `~/.local/bin` so Terminal can open files and folders in Clearance. No admin privileges required."
+            return "\(prefix) No admin privileges required."
         }
     }
 
