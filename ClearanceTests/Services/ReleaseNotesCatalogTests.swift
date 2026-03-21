@@ -39,7 +39,7 @@ final class ReleaseNotesCatalogTests: XCTestCase {
 
         let plist: [String: Any] = [
             "CFBundleExecutable": "Clearance",
-            "CFBundleIdentifier": "com.jesse.ClearanceTests.ReleaseNotesFixture",
+            "CFBundleIdentifier": "com.primeradiant.ClearanceTests.ReleaseNotesFixture",
             "CFBundleName": "Clearance",
             "CFBundlePackageType": "APPL",
             "CFBundleShortVersionString": version

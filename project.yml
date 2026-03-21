@@ -1,6 +1,6 @@
 name: Clearance
 options:
-  bundleIdPrefix: com.jesse
+  bundleIdPrefix: com.primeradiant
   deploymentTarget:
     macOS: 14.0
 packages:
@@ -23,7 +23,7 @@ targets:
         buildPhase: resources
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.jesse.Clearance
+        PRODUCT_BUNDLE_IDENTIFIER: com.primeradiant.Clearance
         INFOPLIST_FILE: Clearance/App/Info.plist
         SWIFT_VERSION: 6.0
         CODE_SIGN_STYLE: Automatic
@@ -63,7 +63,7 @@ targets:
       - target: Clearance
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.jesse.ClearanceTests
+        PRODUCT_BUNDLE_IDENTIFIER: com.primeradiant.ClearanceTests
         GENERATE_INFOPLIST_FILE: YES
         SWIFT_VERSION: 6.0
 schemes:

@@ -9,7 +9,7 @@ do {
 
 private func run() throws {
     guard let helperExecutableURL = Bundle.main.executableURL,
-          let appURL = ClearanceCommandLineTool.appBundleURL(forHelperExecutableURL: helperExecutableURL) else {
+          let appURL = ClearanceCommandLineTool.appURL(forExecutableURL: helperExecutableURL) else {
         throw CommandError.appBundleNotFound
     }
 
@@ -35,7 +35,7 @@ private enum CommandError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .appBundleNotFound:
-            return "Could not locate Clearance.app from the bundled helper."
+            return "Could not locate \(ClearanceCommandLineTool.appBundleIdentifier)."
         case .openFailed(let status):
             return "`open` exited with status \(status)."
         }

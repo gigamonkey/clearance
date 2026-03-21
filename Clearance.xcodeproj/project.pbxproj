@@ -806,7 +806,7 @@
 					"@executable_path/../Frameworks",
 					"@loader_path/../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.jesse.ClearanceTests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.primeradiant.ClearanceTests;
 				SDKROOT = macosx;
 				SWIFT_VERSION = 6.0;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Clearance.app/Contents/MacOS/Clearance";
@@ -821,7 +821,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.jesse.ClearanceCLI;
+				PRODUCT_BUNDLE_IDENTIFIER = com.primeradiant.ClearanceCLI;
 				PRODUCT_NAME = clearance;
 				SDKROOT = macosx;
 				SWIFT_VERSION = 6.0;
@@ -841,7 +841,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 1.2.7;
-				PRODUCT_BUNDLE_IDENTIFIER = com.jesse.Clearance;
+				PRODUCT_BUNDLE_IDENTIFIER = com.primeradiant.Clearance;
 				SDKROOT = macosx;
 				SPARKLE_FEED_URL = "";
 				SPARKLE_PUBLIC_ED_KEY = "";
@@ -862,7 +862,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 1.2.7;
-				PRODUCT_BUNDLE_IDENTIFIER = com.jesse.Clearance;
+				PRODUCT_BUNDLE_IDENTIFIER = com.primeradiant.Clearance;
 				SDKROOT = macosx;
 				SPARKLE_FEED_URL = "";
 				SPARKLE_PUBLIC_ED_KEY = "";
@@ -881,7 +881,7 @@
 					"@executable_path/../Frameworks",
 					"@loader_path/../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.jesse.ClearanceTests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.primeradiant.ClearanceTests;
 				SDKROOT = macosx;
 				SWIFT_VERSION = 6.0;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Clearance.app/Contents/MacOS/Clearance";
@@ -896,7 +896,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.jesse.ClearanceCLI;
+				PRODUCT_BUNDLE_IDENTIFIER = com.primeradiant.ClearanceCLI;
 				PRODUCT_NAME = clearance;
 				SDKROOT = macosx;
 				SWIFT_VERSION = 6.0;
